@@ -1,0 +1,38 @@
+//
+// Created by cgl on 25-4-2.
+//
+
+#ifndef CAMERA_H
+#define CAMERA_H
+
+#include "Eigen/Eigen"
+
+using namespace Eigen;
+
+class Camera {
+    float TurnRate = 0.2f;
+    float velocityRate = 1.f;
+    Vector3f Position;
+    Vector3f Up;
+    Vector3f Lookat;
+
+public:
+    Camera(Vector3f position, Vector3f up, Vector3f lookat) : Position(position), Up(up), Lookat(lookat) {
+    }
+
+    Camera();
+
+    void MoveForward(float velocityRate);
+
+    void MoveRight(float velocityRate);
+    void MoveRise(float velocityRate);
+
+    void TurnX(float angle);
+
+    void TurnY(float angle);
+
+    Matrix4f GetViewMatrix();
+};
+
+
+#endif //CAMERA_H
