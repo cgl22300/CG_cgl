@@ -44,7 +44,7 @@ Vector3f position = {0, 0, 0};
 const char *VertexShader_Path = "../Shaders/VertexShader.glsl";
 const char *FragmentSharder_Path = "../Shaders/FragmentShader.frag";
 const char *FragmentSharder_Path2 = "../Shaders/FragmentShader2.frag";
-
+const char *FragmentSharder_Path3 = "../Shaders/LightFragment.frag";
 //const char *VertexShader_Path = "Shaders/VertexShader.glsl";
 //const char *FragmentSharder_Path = "Shaders/FragmentShader.frag";
 //const char *FragmentSharder_Path2 = "Shaders/FragmentShader2.frag";
@@ -67,6 +67,7 @@ int main() {
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 #ifdef __APPLE__
@@ -111,9 +112,10 @@ int main() {
     int nrAttributes;
 
 
-    //准备两个着色器微程序
+    //准备微程序
     Shader shader1 = Shader(VertexShader_Path, FragmentSharder_Path);
-    Shader shader2 = Shader(VertexShader_Path, FragmentSharder_Path2);
+//    Shader shader2 = Shader(VertexShader_Path, FragmentSharder_Path2);
+    Shader Lampshader = Shader(VertexShader_Path, FragmentSharder_Path3);
     //着色器准备完毕
 
 
@@ -127,41 +129,41 @@ int main() {
     unsigned int texture4 = Load_Tex(Tex2_Path);
 
     float vertices[] = {
-            // 前面 (z = -0.5)
-            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, // 0
-            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, // 1
-            0.5f, 0.5f, -0.5f, 1.0f, 1.0f, // 2
-            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, // 3
+            // 前面 (z = -0.5)                  //法线
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // 0
+            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, // 1
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // 2
+            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, // 3
 
             // 后面 (z = 0.5)
-            -0.5f, -0.5f, 0.5f, 1.0f, 0.0f, // 4 (U翻转)
-            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, // 5
-            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, // 6
-            -0.5f, 0.5f, 0.5f, 1.0f, 1.0f, // 7
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, // 4 (U翻转)
+            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // 5
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, // 6
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // 7
 
             // 左面 (x = -0.5)
-            -0.5f, -0.5f, -0.5f, 1.0f, 0.0f, // 8 (U映射到z轴)
-            -0.5f, 0.5f, -0.5f, 1.0f, 1.0f, // 9
-            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, // 10
-            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, // 11
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // 8 (U映射到z轴)
+            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // 9
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // 10
+            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 11
 
             // 右面 (x = 0.5)
-            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, // 12 (U映射到z轴)
-            0.5f, 0.5f, -0.5f, 0.0f, 1.0f, // 13
-            0.5f, 0.5f, 0.5f, 1.0f, 1.0f, // 14
-            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, // 15
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 12 (U映射到z轴)
+            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // 13
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // 14
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // 15
 
             // 底面 (y = -0.5)
-            -0.5f, -0.5f, -0.5f, 0.0f, 1.0f, // 16 (V翻转)
-            0.5f, -0.5f, -0.5f, 1.0f, 1.0f, // 17
-            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, // 18
-            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, // 19
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // 16 (V翻转)
+            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, // 17
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // 18
+            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, // 19
 
             // 顶面 (y = 0.5)
-            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, // 20
-            0.5f, 0.5f, -0.5f, 1.0f, 1.0f, // 21
-            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, // 22
-            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f  // 23
+            -0.5f, 0.5f, -0.5f, 0.0f,  1.0f,  0.0f,0.0f, 1.0f, // 20
+            0.5f, 0.5f, -0.5f, 0.0f,  1.0f,  0.0f,1.0f, 1.0f, // 21
+            0.5f, 0.5f, 0.5f, 0.0f,  1.0f,  0.0f,1.0f, 0.0f, // 22
+            -0.5f, 0.5f, 0.5f, 0.0f,  1.0f,  0.0f,0.0f, 0.0f  // 23
     };
 
     unsigned int indices[] = {
@@ -185,6 +187,7 @@ int main() {
     };
 
     Actor box1;
+    Actor Lamp;
 //
     unsigned int VBO0, EBO0;
 
@@ -197,18 +200,22 @@ int main() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO0);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    box1.Mesh->LoadMesh(VBO0, EBO0, sizeof(indices)/sizeof(unsigned int));
-//    box1.Mesh->LoadMesh(vertices, sizeof(vertices), indices, sizeof(indices));
-    box1.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-    box1.Mesh->SetVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
+    box1.Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
+    box1.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
+    box1.Mesh->SetVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (3 * sizeof(float)));
+    box1.Mesh->SetVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (6 * sizeof(float)));
 
+    Lamp.Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
+    Lamp.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
+    Lamp.SetWorldScale(0.2f, 0.2f, 0.2f);
+    Lamp.SetWorldLocation(0.8f, 1.2f, 0.8f);
 
     float floor_vertices[] = {
             //     ---- 位置 ----              - 纹理坐标 -
-            0.9f, -0.7f, -.9f, 1.0f, 1.0f, // 右上
-            0.9f, -0.7f, .9f, 1.0f, 0.0f, // 右下
-            -0.9f, -0.7f, .9f, 0.0f, 0.0f, // 左下
-            -0.9f, -0.7f, -.9f, 0.0f, 1.0f // 左上
+            0.9f, -0.7f, -.9f,0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // 右上
+            0.9f, -0.7f, .9f, 0.0f,  1.0f,  0.0f,1.0f, 0.0f, // 右下
+            -0.9f, -0.7f, .9f,0.0f,  1.0f,  0.0f, 0.0f, 0.0f, // 左下
+            -0.9f, -0.7f, -.9f, 0.0f,  1.0f,  0.0f,0.0f, 1.0f // 左上
     };
     unsigned int floor_ind[] = {
             0, 1, 3, // first triangle
@@ -217,72 +224,44 @@ int main() {
 
     Actor floor;
     floor.Mesh->LoadMesh(floor_vertices, sizeof(floor_vertices), floor_ind, sizeof(floor_ind));
-    floor.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-    floor.Mesh->SetVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
-
-//    //顶点数组对象
-//    unsigned int VAO2;
-//    glGenVertexArrays(1, &VAO2);
-//    glBindVertexArray(VAO2);
-//
-//    //顶点缓冲对象
-//    unsigned int VBO2;
-//    glGenBuffers(1, &VBO2);
-//    //GL_ARRAY_BUFFER顶点缓冲
-//    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
-//
-//
-//    //索引数组对象
-//    unsigned int EBO2;
-//    glGenBuffers(1, &EBO2);
-//    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO2);
-//    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(floor_ind), floor_ind, GL_STATIC_DRAW);
-//
-//    glBufferData(GL_ARRAY_BUFFER, sizeof(floor_vertices), floor_vertices, GL_STATIC_DRAW);
-//    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-//    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
-//
-//    glEnableVertexAttribArray(0);
-//    glEnableVertexAttribArray(2);
-//
-//    //完成属性设定后解绑VAO供之后使用
-//    glBindVertexArray(0);
+    floor.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
+    floor.Mesh->SetVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (3 * sizeof(float)));
+    floor.Mesh->SetVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (6 * sizeof(float)));
 
 
     shader1.use();
     shader1.setInt("Texture", 0);
     shader1.setInt("Texture2", 1);
+    auto LightPos=Lamp.GetWorldLocation();
+    shader1.setVec3("lightPos",LightPos.x(),LightPos.y(),LightPos.z());
+
 
     Matrix4f ViewMatrix = Matrix4f::Identity();
     Matrix4f ProjectionMatrix = GetProjectionMatrix(45, HEIGHT / WIDTH, 0.1, 200);
     Matrix4f modelMatrix4f = Matrix4f::Identity();
     Matrix4f transMatrix = Matrix4f::Identity();
+
+    //开启深度测试
     glEnable(GL_DEPTH_TEST);
 //    glDisable(GL_CULL_FACE);
     while (!glfwWindowShouldClose(window)) {
+
         // input
         // -----
         processInput(window);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-/*        //用设置好的颜色刷新背景
-        float red, green, blue;
-        // 加入用于控制颜色变化速度的系数
-        auto timeValue = static_cast<float>(glfwGetTime());
-        const float colorSpeed = 1.0f; // 数值越大变化越快
-        const float t = colorSpeed * timeValue;
-        CalculateColor(t + M_PI, red, green, blue);
-        glClearColor(red, green, blue, 1.0f);*/
 
         glClearColor(0.f, 0.f, 0.f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
 
 
-        // bind textures on corresponding texture units
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture4);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, texture2);
+
+
+
+        ViewMatrix = camera.GetViewMatrix();
+        ProjectionMatrix = GetProjectionMatrix(45, static_cast<float>( WIDTH ) / static_cast<float>( HEIGHT ), 0.1,
+                                               200);
 
         // render container
         shader1.use();
@@ -290,30 +269,41 @@ int main() {
         shader1.setFloat("offset_u", offset_u);
         shader1.setFloat("offset_v", offset_v);
         shader1.setFloat("scaleValue", scaleValue);
-        unsigned int transformLoc = glGetUniformLocation(shader1.ID, "transMatrix");
 
-        //计算变换矩阵
-        modelMatrix4f = GetMoveMatrix(position) * GetXRotationMatrix4f(angle_X) * GetYRotationMatrix4f(angle_Y) *
-                        GetZRotationMatrix4f(angle_Z);
-        ViewMatrix = camera.GetViewMatrix();
-        ProjectionMatrix = GetProjectionMatrix(45, static_cast<float>( WIDTH ) / static_cast<float>( HEIGHT ), 0.1,
-                                               200);
-        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
+        auto ViewPoint=camera.GetViewPoint();
+        shader1.setVec3("viewPos",ViewPoint.x(),ViewPoint.y(),ViewPoint.z());
 
-        box1.Mesh->DrawElement();
-
+        // bind textures on corresponding texture units
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture3);
-        glActiveTexture(GL_TEXTURE1);
         glBindTexture(GL_TEXTURE_2D, texture4);
 
-        transMatrix = ProjectionMatrix * ViewMatrix;
-
+        unsigned int transformLoc = glGetUniformLocation(shader1.ID, "transMatrix");
+        unsigned int model = glGetUniformLocation(shader1.ID, "model");
+        //计算变换矩阵
+        modelMatrix4f = box1.GetModelMatrix4f();
+        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
+        glUniformMatrix4fv(model, 1, GL_FALSE, modelMatrix4f.data());
+        box1.Mesh->DrawElement();
 
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, texture1);
+
+
+        modelMatrix4f = box1.GetModelMatrix4f();
+        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
+        glUniformMatrix4fv(model, 1, GL_FALSE, modelMatrix4f.data());
         floor.Mesh->DrawElement();
 
+
+        Lampshader.use();
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
+        modelMatrix4f = Lamp.GetModelMatrix4f();
+        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
+        Lamp.Mesh->DrawElement();
 
         //划线模式和填充模式
         // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -326,7 +316,6 @@ int main() {
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
-
 
 
     glDeleteBuffers(1, &VBO0);

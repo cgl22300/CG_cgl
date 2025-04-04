@@ -32,6 +32,10 @@ public:
 
     void TurnY(float angle);
 
+    inline Vector3f GetViewPoint() {
+        return Position;
+    }
+
     inline void SetTurnRate(const float &turnRate) {
         this->TurnRate = turnRate;
     }

@@ -35,7 +35,7 @@ inline Matrix4f GetOrthographicProjectionMatrix(float fov, float aspect, float z
     float tanHalfFov = tan(fov * M_PI / 360.0f);
     float height = 2.0f * tanHalfFov;
     float width = height * aspect;
-    float range = zFar - zNear;
+    float range = -zFar + zNear;
 
     projection(0, 0) = 2.0f / width;
     projection(1, 1) = 2.0f / height;
@@ -137,7 +137,7 @@ inline Matrix4f GetScale(const Vector3f &Scale) {
 
     ScaleMat(0, 0) = Scale.x();
     ScaleMat(1, 1) = Scale.y();
-    ScaleMat(3, 3) = Scale.z();
+    ScaleMat(2, 2) = Scale.z();
 
     return ScaleMat;
 }

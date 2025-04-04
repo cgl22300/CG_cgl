@@ -5,12 +5,13 @@
 #ifndef CG_E1_1_LIGHT_H
 #define CG_E1_1_LIGHT_H
 #include <glad/glad.h>
+#include "Actor.h"
 
-class Light {
+class Light : Actor{
 
-    unsigned int VAO;
 
-    void Init();
+
+
 };
 
 

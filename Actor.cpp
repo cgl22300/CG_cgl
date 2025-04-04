@@ -69,11 +69,11 @@ Eigen::Vector3f Actor::GetWorldScale() {
 Actor::Actor() : Parent(nullptr) {
     WorldLocation << 0.f, 0.f, 0.f;
     WorldRotation << 0.f, 0.f, 0.f;
-    WorldScale << 0.f, 0.f, 0.f;
+    WorldScale << 1.f, 1.f, 1.f;
     //相对于父级的位置
     RelativeLocation << 0.f, 0.f, 0.f;
     RelativeRotation << 0.f, 0.f, 0.f;
-    RelativeScale << 0.f, 0.f, 0.f;
+    RelativeScale << 1.f, 1.f, 1.f;
     Mesh = std::make_unique<StaticMesh>();
 }
 

@@ -4,11 +4,3 @@
 
 #include "Light.h"
 
-void Light::Init() {
-    glGenVertexArrays(1, &VAO);
-    glBindVertexArray(VAO);
-
-
-
-    glBindVertexArray(0);
-}
