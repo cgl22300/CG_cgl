@@ -39,6 +39,10 @@ add_executable(CG_E1_1
         utility/Camera.cpp
         utility/Camera.h
         utility/TransMatrix.h
+        StaticMesh.cpp
+        StaticMesh.h
+        Actor.cpp
+        Actor.h
 )
 
 # 输出目录配置
