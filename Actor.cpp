@@ -74,6 +74,7 @@ Actor::Actor() : Parent(nullptr) {
     RelativeLocation << 0.f, 0.f, 0.f;
     RelativeRotation << 0.f, 0.f, 0.f;
     RelativeScale << 0.f, 0.f, 0.f;
+    Mesh = std::make_unique<StaticMesh>();
 }
 
 Eigen::Matrix4f Actor::GetModelMatrix4f() {

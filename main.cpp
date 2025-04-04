@@ -8,6 +8,7 @@
 #include "Camera.h"
 #include "Shader.h"
 #include "TransMatrix.h"
+#include "Actor.h"
 
 using namespace Eigen;
 
@@ -89,7 +90,6 @@ int main() {
     // 隐藏鼠标并让其自由移动
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, [](GLFWwindow *window, double xpos, double ypos) {
-
         static double CursorX = xpos, CursorY = ypos;
         camera.TurnX(xpos - CursorX);
         camera.TurnY(ypos - CursorY);
@@ -183,12 +183,13 @@ int main() {
             // 顶面
             20, 21, 22, 22, 23, 20
     };
-    unsigned int VBO0, VAO0, EBO0;
-    glGenVertexArrays(1, &VAO0);
+
+    Actor box1;
+//
+    unsigned int VBO0, EBO0;
+
     glGenBuffers(1, &VBO0);
     glGenBuffers(1, &EBO0);
-
-    glBindVertexArray(VAO0);
 
     glBindBuffer(GL_ARRAY_BUFFER, VBO0);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
@@ -196,18 +197,13 @@ int main() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO0);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-    glEnableVertexAttribArray(0);
-    // texture coord attribute
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
-    glEnableVertexAttribArray(2);
+    box1.Mesh->LoadMesh(VBO0, EBO0, sizeof(indices)/sizeof(unsigned int));
+//    box1.Mesh->LoadMesh(vertices, sizeof(vertices), indices, sizeof(indices));
+    box1.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+    box1.Mesh->SetVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
 
 
-    //完成属性设定后解绑VAO供之后使用
-    glBindVertexArray(0);
-
-    float floor[] = {
+    float floor_vertices[] = {
             //     ---- 位置 ----              - 纹理坐标 -
             0.9f, -0.7f, -.9f, 1.0f, 1.0f, // 右上
             0.9f, -0.7f, .9f, 1.0f, 0.0f, // 右下
@@ -218,33 +214,39 @@ int main() {
             0, 1, 3, // first triangle
             1, 2, 3 // second triangle
     };
-    //顶点数组对象
-    unsigned int VAO2;
-    glGenVertexArrays(1, &VAO2);
-    glBindVertexArray(VAO2);
 
-    //顶点缓冲对象
-    unsigned int VBO2;
-    glGenBuffers(1, &VBO2);
-    //GL_ARRAY_BUFFER顶点缓冲
-    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
+    Actor floor;
+    floor.Mesh->LoadMesh(floor_vertices, sizeof(floor_vertices), floor_ind, sizeof(floor_ind));
+    floor.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+    floor.Mesh->SetVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
 
-
-    //索引数组对象
-    unsigned int EBO2;
-    glGenBuffers(1, &EBO2);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO2);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(floor_ind), floor_ind, GL_STATIC_DRAW);
-
-    glBufferData(GL_ARRAY_BUFFER, sizeof(floor), floor, GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
-
-    glEnableVertexAttribArray(0);
-    glEnableVertexAttribArray(2);
-
-    //完成属性设定后解绑VAO供之后使用
-    glBindVertexArray(0);
+//    //顶点数组对象
+//    unsigned int VAO2;
+//    glGenVertexArrays(1, &VAO2);
+//    glBindVertexArray(VAO2);
+//
+//    //顶点缓冲对象
+//    unsigned int VBO2;
+//    glGenBuffers(1, &VBO2);
+//    //GL_ARRAY_BUFFER顶点缓冲
+//    glBindBuffer(GL_ARRAY_BUFFER, VBO2);
+//
+//
+//    //索引数组对象
+//    unsigned int EBO2;
+//    glGenBuffers(1, &EBO2);
+//    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO2);
+//    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(floor_ind), floor_ind, GL_STATIC_DRAW);
+//
+//    glBufferData(GL_ARRAY_BUFFER, sizeof(floor_vertices), floor_vertices, GL_STATIC_DRAW);
+//    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) 0);
+//    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void *) (3 * sizeof(float)));
+//
+//    glEnableVertexAttribArray(0);
+//    glEnableVertexAttribArray(2);
+//
+//    //完成属性设定后解绑VAO供之后使用
+//    glBindVertexArray(0);
 
 
     shader1.use();
@@ -263,17 +265,18 @@ int main() {
         processInput(window);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        //用设置好的颜色刷新背景
+/*        //用设置好的颜色刷新背景
         float red, green, blue;
-
         // 加入用于控制颜色变化速度的系数
         auto timeValue = static_cast<float>(glfwGetTime());
         const float colorSpeed = 1.0f; // 数值越大变化越快
         const float t = colorSpeed * timeValue;
-
         CalculateColor(t + M_PI, red, green, blue);
-        glClearColor(red, green, blue, 1.0f);
+        glClearColor(red, green, blue, 1.0f);*/
+
+        glClearColor(0.f, 0.f, 0.f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
+
 
         // bind textures on corresponding texture units
         glActiveTexture(GL_TEXTURE0);
@@ -289,25 +292,17 @@ int main() {
         shader1.setFloat("scaleValue", scaleValue);
         unsigned int transformLoc = glGetUniformLocation(shader1.ID, "transMatrix");
 
+        //计算变换矩阵
         modelMatrix4f = GetMoveMatrix(position) * GetXRotationMatrix4f(angle_X) * GetYRotationMatrix4f(angle_Y) *
                         GetZRotationMatrix4f(angle_Z);
         ViewMatrix = camera.GetViewMatrix();
-
         ProjectionMatrix = GetProjectionMatrix(45, static_cast<float>( WIDTH ) / static_cast<float>( HEIGHT ), 0.1,
                                                200);
-
-
         transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
-        glBindVertexArray(VAO0);
-        glDrawElements(GL_TRIANGLES, sizeof(indices) / sizeof(indices[0]), GL_UNSIGNED_INT, 0);
-//        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, 0);
 
+        box1.Mesh->DrawElement();
 
-
-
-//         bind textures on corresponding texture units
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, texture3);
         glActiveTexture(GL_TEXTURE1);
@@ -316,11 +311,8 @@ int main() {
         transMatrix = ProjectionMatrix * ViewMatrix;
 
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
-        glBindVertexArray(VAO2);
 
-
-        glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
-        glBindVertexArray(0);
+        floor.Mesh->DrawElement();
 
 
         //划线模式和填充模式
@@ -336,7 +328,7 @@ int main() {
     }
 
 
-    glDeleteVertexArrays(1, &VAO0);
+
     glDeleteBuffers(1, &VBO0);
     glDeleteTextures(1, &texture1);
     glDeleteTextures(1, &texture2);
@@ -355,8 +347,7 @@ void processInput(GLFWwindow *window) {
         if (flag) {
             flag = false;
             GetProjectionMatrix = GetPerspectiveProjectionMatrix;
-        }
-        else {
+        } else {
             flag = true;
             GetProjectionMatrix = GetOrthographicProjectionMatrix;
         }

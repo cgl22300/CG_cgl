@@ -43,6 +43,8 @@ add_executable(CG_E1_1
         StaticMesh.h
         Actor.cpp
         Actor.h
+        Light.cpp
+        Light.h
 )
 
 # 输出目录配置

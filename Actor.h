@@ -5,16 +5,17 @@
 #ifndef CG_E1_1_ACTOR_H
 #define CG_E1_1_ACTOR_H
 
+#include <memory>
 #include "Eigen/Eigen"
-
+#include "StaticMesh.h"
 
 
 class Actor {
 
+
     //父级
     Actor *Parent;
     //没有父级时,方位通过此属性确定
-
     Eigen::Vector3f WorldLocation;
     Eigen::Vector3f WorldRotation;
     Eigen::Vector3f WorldScale;
@@ -23,9 +24,12 @@ class Actor {
     Eigen::Vector3f RelativeRotation;
     Eigen::Vector3f RelativeScale;
 
-    void AttachTo(Actor *parent);
+public:
+    std::unique_ptr<StaticMesh> Mesh;
 
     Actor();
+
+    void AttachTo(Actor *parent);
 
     // 委托构造函数，调用默认构造函数并更新 WorldLocation
     explicit Actor(const Eigen::Vector3f &Location) : Actor() {
