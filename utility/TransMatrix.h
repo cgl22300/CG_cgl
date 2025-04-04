@@ -20,8 +20,8 @@ inline Matrix4f GetPerspectiveProjectionMatrix(float fov, float aspect, float zN
 
     projection(0, 0) = 1.0f / (aspect * tanHalfFov);
     projection(1, 1) = 1.0f / tanHalfFov;
-    projection(2,2) = -1.0f / (zFar - zNear);
-    projection(2,3) = -zNear / (zFar - zNear);
+    projection(2, 2) = -1.0f / (zFar - zNear);
+    projection(2, 3) = -zNear / (zFar - zNear);
     projection(3, 2) = -1.0f;
 
     return projection;
@@ -95,6 +95,16 @@ inline Matrix4f GetZRotationMatrix4f(float rotation_angle) {
     return model;
 }
 
+inline Matrix4f GetRotation(Vector3f YawPitchRoll) {
+    // 获取各轴旋转矩阵（Yaw绕Y轴，Pitch绕X轴，Roll绕Z轴）
+    Matrix4f R_yaw = GetYRotationMatrix4f(YawPitchRoll.x());
+    Matrix4f R_pitch = GetXRotationMatrix4f(YawPitchRoll.y());
+    Matrix4f R_roll = GetZRotationMatrix4f(YawPitchRoll.z());
+
+    // 组合顺序：Roll(Z) * Pitch(X) * Yaw(Y)
+    return R_roll * R_pitch * R_yaw;
+}
+
 //对任意转轴实现的旋转,传入转轴、旋转角
 inline Matrix4f GetRotation(Vector3f axis, float angle) {
     //创建单位矩阵
@@ -120,6 +130,16 @@ inline Matrix4f GetRotation(Vector3f axis, float angle) {
             0, 0, 0, 1;
 
     return model;
+}
+
+inline Matrix4f GetScale(const Vector3f &Scale) {
+    Matrix4f ScaleMat = Matrix4f::Identity();
+
+    ScaleMat(0, 0) = Scale.x();
+    ScaleMat(1, 1) = Scale.y();
+    ScaleMat(3, 3) = Scale.z();
+
+    return ScaleMat;
 }
 
 #endif //TRANSMATRIX_H

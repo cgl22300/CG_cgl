@@ -11,7 +11,7 @@ using namespace Eigen;
 
 class Camera {
     float TurnRate = 0.2f;
-    float velocityRate = 1.f;
+    float VelocityRate = 1.f;
     Vector3f Position;
     Vector3f Up;
     Vector3f Lookat;
@@ -25,11 +25,20 @@ public:
     void MoveForward(float velocityRate);
 
     void MoveRight(float velocityRate);
+
     void MoveRise(float velocityRate);
 
     void TurnX(float angle);
 
     void TurnY(float angle);
+
+    inline void SetTurnRate(const float &turnRate) {
+        this->TurnRate = turnRate;
+    }
+
+    void SetVelocityRate(const float &velocityRate) {
+        this->VelocityRate = velocityRate;
+    }
 
     Matrix4f GetViewMatrix();
 };

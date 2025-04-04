@@ -40,22 +40,24 @@ Camera camera = Camera(Vector3f(0.f, 0.f, 3.f), Vector3f(0.f, 1.0f, 0.f), Vector
 
 Vector3f position = {0, 0, 0};
 
-//const char *VertexShader_Path = "../Shaders/VertexShader.glsl";
-//const char *FragmentSharder_Path = "../Shaders/FragmentShader.frag";
-//const char *FragmentSharder_Path2 = "../Shaders/FragmentShader2.frag";
-const char *VertexShader_Path = "Shaders/VertexShader.glsl";
-const char *FragmentSharder_Path = "Shaders/FragmentShader.frag";
-const char *FragmentSharder_Path2 = "Shaders/FragmentShader2.frag";
+const char *VertexShader_Path = "../Shaders/VertexShader.glsl";
+const char *FragmentSharder_Path = "../Shaders/FragmentShader.frag";
+const char *FragmentSharder_Path2 = "../Shaders/FragmentShader2.frag";
+
+//const char *VertexShader_Path = "Shaders/VertexShader.glsl";
+//const char *FragmentSharder_Path = "Shaders/FragmentShader.frag";
+//const char *FragmentSharder_Path2 = "Shaders/FragmentShader2.frag";
 
 //
-//const char *container_path = "../tex/container.jpg";
-//const char *Tex1_Path = "../tex/tex1.jpg";
-//const char *Tex2_Path = "../tex/tex2.jpg";
-//const char *SmileFace_Path = "../tex/awesomeface.png";
-const char *SmileFace_Path="tex/awesomeface.png";
-const char *container_path = "tex/container.jpg";
-const char *Tex1_Path = "tex/tex1.jpg";
-const char *Tex2_Path = "tex/tex2.jpg";
+const char *container_path = "../tex/container.jpg";
+const char *Tex1_Path = "../tex/tex1.jpg";
+const char *Tex2_Path = "../tex/tex2.jpg";
+const char *SmileFace_Path = "../tex/awesomeface.png";
+
+//const char *SmileFace_Path="tex/awesomeface.png";
+//const char *container_path = "tex/container.jpg";
+//const char *Tex1_Path = "tex/tex1.jpg";
+//const char *Tex2_Path = "tex/tex2.jpg";
 
 
 int main() {
