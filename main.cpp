@@ -4,6 +4,7 @@
 #include <iostream>
 #include "Eigen/Eigen"
 #include <stb_image.h>
+#include <random>
 
 #include "Camera.h"
 #include "Shader.h"
@@ -42,17 +43,21 @@ Camera camera = Camera(Vector3f(0.f, 0.f, 3.f), Vector3f(0.f, 1.0f, 0.f), Vector
 Vector3f position = {0, 0, 0};
 
 const char *VertexShader_Path = "../Shaders/VertexShader.glsl";
-const char *FragmentSharder_Path = "../Shaders/FragmentShader.frag";
+const char *PointLightFrag_Path = "../Shaders/FragmentShader.frag";
+const char *DirectionLightFrag_Path = "../Shaders/DirectionLight.frag";
 const char *FragmentSharder_Path2 = "../Shaders/FragmentShader2.frag";
 const char *FragmentSharder_Path3 = "../Shaders/LightFragment.frag";
 //const char *VertexShader_Path = "Shaders/VertexShader.glsl";
-//const char *FragmentSharder_Path = "Shaders/FragmentShader.frag";
+//const char *PointLightFrag_Path = "Shaders/FragmentShader.frag";
 //const char *FragmentSharder_Path2 = "Shaders/FragmentShader2.frag";
 
 //
 const char *container_path = "../tex/container.jpg";
+const char *container2_path = "../tex/container2.png";
+const char *container2_specular_path = "../tex/container2_specular.png";
 const char *Tex1_Path = "../tex/tex1.jpg";
 const char *Tex2_Path = "../tex/tex2.jpg";
+const char *EmissionMap_Path = "../tex/EmissionMap.jpg";
 const char *SmileFace_Path = "../tex/awesomeface.png";
 
 //const char *SmileFace_Path="tex/awesomeface.png";
@@ -109,84 +114,81 @@ int main() {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
+
     int nrAttributes;
 
 
     //准备微程序
-    Shader shader1 = Shader(VertexShader_Path, FragmentSharder_Path);
+    Shader shader_PointLight = Shader(VertexShader_Path, PointLightFrag_Path);
+    Shader shader_DirectLight = Shader(VertexShader_Path, DirectionLightFrag_Path);
 //    Shader shader2 = Shader(VertexShader_Path, FragmentSharder_Path2);
     Shader Lampshader = Shader(VertexShader_Path, FragmentSharder_Path3);
     //着色器准备完毕
-
+    Shader &CurrentSharder = shader_PointLight;
 
     //渲染目标信息准备
     //------------
     //纹理生成
     stbi_set_flip_vertically_on_load(true);
-    unsigned int texture1 = Load_Tex(container_path);
-    unsigned int texture2 = Load_Tex4f(SmileFace_Path);
+    unsigned int Tex_box2 = Load_Tex4f(container2_path);
+    unsigned int SpecularTex_box2 = Load_Tex4f(container2_specular_path);
+    unsigned int Tex_EmissionMap = Load_Tex(EmissionMap_Path);
+    unsigned int Tex_SmileFace = Load_Tex4f(SmileFace_Path);
     unsigned int texture3 = Load_Tex(Tex1_Path);
-    unsigned int texture4 = Load_Tex(Tex2_Path);
+    unsigned int Tex_Cat = Load_Tex(Tex2_Path);
 
     float vertices[] = {
-            // 前面 (z = -0.5)                  //法线
-            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f, // 0
-            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f, // 1
-            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f, // 2
-            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f, // 3
+            // positions          // normals           // texture coords
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
 
-            // 后面 (z = 0.5)
-            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f, // 4 (U翻转)
-            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, // 5
-            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, // 6
-            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, // 7
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
 
-            // 左面 (x = -0.5)
-            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // 8 (U映射到z轴)
-            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // 9
-            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // 10
-            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 11
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
 
-            // 右面 (x = 0.5)
-            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, // 12 (U映射到z轴)
-            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f, // 13
-            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f, // 14
-            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f, // 15
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
 
-            // 底面 (y = -0.5)
-            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f, // 16 (V翻转)
-            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f, // 17
-            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f, // 18
-            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f, // 19
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
 
-            // 顶面 (y = 0.5)
-            -0.5f, 0.5f, -0.5f, 0.0f,  1.0f,  0.0f,0.0f, 1.0f, // 20
-            0.5f, 0.5f, -0.5f, 0.0f,  1.0f,  0.0f,1.0f, 1.0f, // 21
-            0.5f, 0.5f, 0.5f, 0.0f,  1.0f,  0.0f,1.0f, 0.0f, // 22
-            -0.5f, 0.5f, 0.5f, 0.0f,  1.0f,  0.0f,0.0f, 0.0f  // 23
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
+            0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
+            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f
     };
-
-    unsigned int indices[] = {
-            // 前面
-            0, 1, 2, 2, 3, 0,
-
-            // 后面
-            4, 5, 6, 6, 7, 4,
-
-            // 左面
-            8, 9, 10, 10, 11, 8,
-
-            // 右面
-            12, 13, 14, 14, 15, 12,
-
-            // 底面
-            16, 17, 18, 18, 19, 16,
-
-            // 顶面
-            20, 21, 22, 22, 23, 20
-    };
+    unsigned int indices[36];
+    for (unsigned int i = 0; i < 36; i++) {
+        indices[i] = i;
+    }
 
     Actor box1;
+
+
     Actor Lamp;
 //
     unsigned int VBO0, EBO0;
@@ -200,22 +202,41 @@ int main() {
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO0);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    box1.Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
-    box1.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
-    box1.Mesh->SetVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (3 * sizeof(float)));
-    box1.Mesh->SetVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (6 * sizeof(float)));
 
+    float posiotions[] = {0.f, 0.f, 0.f,
+                          -1.f, -1.f, -1.f,
+                          -1.f, 1.f, -1.f,
+                          1.f, -1.f, -1.f,
+                          1.f, 1.f, -1.f
+    };
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(-180.f, 180.f);
+
+    Actor boxes[5];
+    for (int i = 0; i < 5; i++) {
+        boxes[i].Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
+        boxes[i].Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
+        boxes[i].Mesh->SetVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+                                              (void *) (3 * sizeof(float)));
+        boxes[i].Mesh->SetVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
+                                              (void *) (6 * sizeof(float)));
+        boxes[i].SetWorldLocation(posiotions[i * 3 ], posiotions[i * 3 + 1 ], posiotions[i * 3 + 2 ]);
+//        boxes[i].SetWorldRotation(dis(gen), dis(gen), dis(gen));
+
+    }
     Lamp.Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
     Lamp.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
-    Lamp.SetWorldScale(0.2f, 0.2f, 0.2f);
-    Lamp.SetWorldLocation(0.8f, 1.2f, 0.8f);
+    Lamp.SetWorldScale(0.1f, 0.1f, 0.1f);
+    Lamp.SetWorldLocation(0.f, 0.f, 1.5f);
 
     float floor_vertices[] = {
-            //     ---- 位置 ----              - 纹理坐标 -
-            0.9f, -0.7f, -.9f,0.0f,  1.0f,  0.0f, 1.0f, 1.0f, // 右上
-            0.9f, -0.7f, .9f, 0.0f,  1.0f,  0.0f,1.0f, 0.0f, // 右下
-            -0.9f, -0.7f, .9f,0.0f,  1.0f,  0.0f, 0.0f, 0.0f, // 左下
-            -0.9f, -0.7f, -.9f, 0.0f,  1.0f,  0.0f,0.0f, 1.0f // 左上
+            //     ---- 位置 ----
+            2.f, -2.f, -2.f,        0.0f, 1.0f, 0.0f,      1.0f, 1.0f, // 右上
+            2.f, -2.f, 2.f,       0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 右下
+            -2.f, -2.f, 2.f,    0.0f, 1.0f, 0.0f,   0.0f, 0.0f, // 左下
+            -2.f, -2.f, -2.f, 0.0f, 1.0f, 0.0f,   0.0f, 1.0f // 左上
     };
     unsigned int floor_ind[] = {
             0, 1, 3, // first triangle
@@ -229,13 +250,20 @@ int main() {
     floor.Mesh->SetVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (6 * sizeof(float)));
 
 
-    shader1.use();
-    shader1.setInt("Texture", 0);
-    shader1.setInt("Texture2", 1);
-    auto LightPos=Lamp.GetWorldLocation();
-    shader1.setVec3("lightPos",LightPos.x(),LightPos.y(),LightPos.z());
+    CurrentSharder.use();
+    auto LightPos = Lamp.GetWorldLocation();
+    CurrentSharder.setVec3("light.position", LightPos.x(), LightPos.y(), LightPos.z());
+    CurrentSharder.setVec3("light.direction", -LightPos.x(), -LightPos.y(), -LightPos.z());
+
+    CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+    CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+    CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
 
 
+    CurrentSharder.setFloat("material.shininess", 32.0f);
+    CurrentSharder.setInt("material.diffuse", 0);
+    CurrentSharder.setInt("material.specular", 1);
+    CurrentSharder.setInt("material.emission", 2);
     Matrix4f ViewMatrix = Matrix4f::Identity();
     Matrix4f ProjectionMatrix = GetProjectionMatrix(45, HEIGHT / WIDTH, 0.1, 200);
     Matrix4f modelMatrix4f = Matrix4f::Identity();
@@ -256,39 +284,46 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT);
 
 
-
-
-
         ViewMatrix = camera.GetViewMatrix();
         ProjectionMatrix = GetProjectionMatrix(45, static_cast<float>( WIDTH ) / static_cast<float>( HEIGHT ), 0.1,
                                                200);
 
         // render container
-        shader1.use();
-        shader1.setFloat("mixValue", mixValue);
-        shader1.setFloat("offset_u", offset_u);
-        shader1.setFloat("offset_v", offset_v);
-        shader1.setFloat("scaleValue", scaleValue);
+        CurrentSharder.use();
+        CurrentSharder.setFloat("mixValue", mixValue);
+        CurrentSharder.setFloat("offset_u", offset_u);
+        CurrentSharder.setFloat("offset_v", offset_v);
+        CurrentSharder.setFloat("scaleValue", scaleValue);
 
-        auto ViewPoint=camera.GetViewPoint();
-        shader1.setVec3("viewPos",ViewPoint.x(),ViewPoint.y(),ViewPoint.z());
+        auto ViewPoint = camera.GetViewPoint();
+        CurrentSharder.setVec3("viewPos", ViewPoint.x(), ViewPoint.y(), ViewPoint.z());
 
         // bind textures on corresponding texture units
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture4);
+        glBindTexture(GL_TEXTURE_2D, Tex_box2);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, SpecularTex_box2);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, Tex_EmissionMap);
 
-        unsigned int transformLoc = glGetUniformLocation(shader1.ID, "transMatrix");
-        unsigned int model = glGetUniformLocation(shader1.ID, "model");
+        unsigned int transformLoc = glGetUniformLocation(shader_PointLight.ID, "transMatrix");
+        unsigned int model = glGetUniformLocation(shader_PointLight.ID, "model");
+
+        auto WorldmodelMatrix = GetMoveMatrix(position);
+
         //计算变换矩阵
-        modelMatrix4f = box1.GetModelMatrix4f();
-        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
-        glUniformMatrix4fv(model, 1, GL_FALSE, modelMatrix4f.data());
-        box1.Mesh->DrawElement();
+        for (auto &boxe: boxes) {
+            boxe.SetWorldRotation(angle_X, angle_Y, angle_Z);
+            modelMatrix4f = boxe.GetModelMatrix4f() * WorldmodelMatrix;
+            transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
+            glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
+            glUniformMatrix4fv(model, 1, GL_FALSE, modelMatrix4f.data());
+            boxe.Mesh->DrawElement();
+        }
 
 
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, texture1);
+        glBindTexture(GL_TEXTURE_2D, Tex_Cat);
 
 
         modelMatrix4f = box1.GetModelMatrix4f();
@@ -319,8 +354,8 @@ int main() {
 
 
     glDeleteBuffers(1, &VBO0);
-    glDeleteTextures(1, &texture1);
-    glDeleteTextures(1, &texture2);
+    glDeleteTextures(1, &Tex_box2);
+    glDeleteTextures(1, &Tex_SmileFace);
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
@@ -392,19 +427,19 @@ void processInput(GLFWwindow *window) {
     }
 
     if (glfwGetKey(window, GLFW_KEY_X) == GLFW_PRESS) {
-        angle_X -= 5.f;
+        angle_X -= 0.2f;
         if (angle_X <= 0.0f) {
             angle_X = 360 + angle_Y;
         }
     }
     if (glfwGetKey(window, GLFW_KEY_Y) == GLFW_PRESS) {
-        angle_Y -= 5.f;
+        angle_Y -= 0.2f;
         if (angle_Y <= 0.0f) {
             angle_Y = 360 + angle_Y;
         }
     }
     if (glfwGetKey(window, GLFW_KEY_Z) == GLFW_PRESS) {
-        angle_Z -= 5.f;
+        angle_Z -= 0.2f;
         if (angle_Z <= 0.0f) {
             angle_Z = 360 + angle_Y;
         }

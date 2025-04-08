@@ -18,10 +18,10 @@ inline Matrix4f GetPerspectiveProjectionMatrix(float fov, float aspect, float zN
     float tanHalfFov = tan(fov ANGLE_TO_RADIAN);
     float range = zFar - zNear;
 
-    projection(0, 0) = 1.0f / (aspect * tanHalfFov);
+    projection(0, 0) = 1.0f / (aspect * tanHalfFov);  // 或者使用-1.0f如果需要翻转
     projection(1, 1) = 1.0f / tanHalfFov;
-    projection(2, 2) = -1.0f / (zFar - zNear);
-    projection(2, 3) = -zNear / (zFar - zNear);
+    projection(2, 2) = -(zFar + zNear) / range;      // 更标准的深度计算
+    projection(2, 3) = -2.0f * zFar * zNear / range; // 更标准的深度计算
     projection(3, 2) = -1.0f;
 
     return projection;
