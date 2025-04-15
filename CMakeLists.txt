@@ -71,12 +71,12 @@ add_custom_command(TARGET CG_E2 POST_BUILD
         COMMENT "Copying ${DEPENDENCY_DLL} to ${EXECUTABLE_OUTPUT_DIR}"
 )
 
-# 复制Shader文件到输出目录
-file(GLOB SHADER_FILES "${SHADER_DIR}/*.glsl" "${SHADER_DIR}/*.frag")
-add_custom_command(TARGET CG_E2 POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "${EXECUTABLE_OUTPUT_DIR}/Shaders"
-        COMMAND ${CMAKE_COMMAND} -E copy
-        ${SHADER_FILES}
-        "${EXECUTABLE_OUTPUT_DIR}/Shaders"
-        COMMENT "Copying shader files"
-)
+## 复制Shader文件到输出目录
+#file(GLOB SHADER_FILES "${SHADER_DIR}/*.glsl" "${SHADER_DIR}/*.frag")
+#add_custom_command(TARGET CG_E2 POST_BUILD
+#        COMMAND ${CMAKE_COMMAND} -E make_directory "${EXECUTABLE_OUTPUT_DIR}/Shaders"
+#        COMMAND ${CMAKE_COMMAND} -E copy
+#        ${SHADER_FILES}
+#        "${EXECUTABLE_OUTPUT_DIR}/Shaders"
+#        COMMENT "Copying shader files"
+#)

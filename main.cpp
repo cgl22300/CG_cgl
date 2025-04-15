@@ -44,12 +44,16 @@ Camera camera = Camera(vec3(0.f, 0.f, 3.f), vec3(0.f, 1.0f, 0.f), vec3(0.f, 0.f,
 vec3 position = {0, 0, 0};
 
 const char *VertexShader_Path = "../Shaders/VertexShader.glsl";
-const char *PointLightFrag_Path = "../Shaders/FragmentShader.frag";
+
+//片段着色器
+const char *PointLightFrag_Path = "../Shaders/PointLight.frag";
 const char *DirectionLightFrag_Path = "../Shaders/DirectionLight.frag";
-const char *FragmentSharder_Path2 = "../Shaders/FragmentShader2.frag";
-const char *FragmentSharder_Path3 = "../Shaders/LightFragment.frag";
+const char *FlashLightFrag_Path = "../Shaders/FlashLight.frag";
+const char *MultiLightFrag_Path = "../Shaders/MultiLight.frag";
+
+const char *LampFrag_Path = "../Shaders/LightFragment.frag";
 //const char *VertexShader_Path = "Shaders/VertexShader.glsl";
-//const char *PointLightFrag_Path = "Shaders/FragmentShader.frag";
+//const char *PointLightFrag_Path = "Shaders/PointLight.frag";
 //const char *FragmentSharder_Path2 = "Shaders/FragmentShader2.frag";
 
 //
@@ -66,6 +70,14 @@ const char *SmileFace_Path = "../tex/awesomeface.png";
 //const char *Tex1_Path = "tex/tex1.jpg";
 //const char *Tex2_Path = "tex/tex2.jpg";
 
+
+
+enum class ShaderMode {
+    PointLight,
+    DirectLight,
+    FlashLight,
+    MultiLight
+};
 
 int main() {
     // glfw: initialize and configure
@@ -117,16 +129,16 @@ int main() {
         return -1;
     }
 
-    int nrAttributes;
 
 
     //准备微程序
     Shader shader_PointLight = Shader(VertexShader_Path, PointLightFrag_Path);
     Shader shader_DirectLight = Shader(VertexShader_Path, DirectionLightFrag_Path);
-//    Shader shader2 = Shader(VertexShader_Path, FragmentSharder_Path2);
-    Shader Lampshader = Shader(VertexShader_Path, FragmentSharder_Path3);
-    //着色器准备完毕
-    Shader &CurrentSharder = shader_PointLight;
+    Shader shader_FlashLight = Shader(VertexShader_Path, FlashLightFrag_Path);
+    Shader shader_MultiLight = Shader(VertexShader_Path, MultiLightFrag_Path);
+
+    Shader Lampshader = Shader(VertexShader_Path, LampFrag_Path);
+
 
     //渲染目标信息准备
     //------------
@@ -191,8 +203,6 @@ int main() {
     Actor box1;
 
 
-    Actor Lamp;
-
     unsigned int VBO0, EBO0;
 
     glGenBuffers(1, &VBO0);
@@ -212,9 +222,6 @@ int main() {
                           1.f, 1.f, -1.f
     };
 
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dis(-180.f, 180.f);
 
     Actor boxes[5];
     for (int i = 0; i < 5; i++) {
@@ -226,13 +233,20 @@ int main() {
                                               (void *) (6 * sizeof(float)));
         boxes[i].SetWorldLocation(posiotions[i * 3], posiotions[i * 3 + 1], posiotions[i * 3 + 2]);
 //        boxes[i].SetWorldRotation(dis(gen), dis(gen), dis(gen));
-
     }
-    Lamp.Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
-    Lamp.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
-    Lamp.SetWorldScale(0.1f, 0.1f, 0.1f);
-    position = vec3(1.f, 1.f, 1.f);
-    Lamp.SetWorldLocation(1.f, 1.f, 1.f);
+
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> dis(-5.f, 5.f);
+
+    Actor Lamp[4];
+    for (int i = 0; i < 4; i++) {
+        Lamp[i].Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
+        Lamp[i].Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
+        Lamp[i].SetWorldScale(0.1f, 0.1f, 0.1f);
+        Lamp[i].SetWorldLocation(dis(gen), dis(gen), dis(gen));
+    }
+
 
     float floor_vertices[] = {
             //     ---- 位置 ----
@@ -252,21 +266,100 @@ int main() {
     floor.Mesh->SetVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (3 * sizeof(float)));
     floor.Mesh->SetVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (6 * sizeof(float)));
 
+    //着色器准备完毕
+    Shader &CurrentSharder = shader_PointLight;
+    ShaderMode shaderMode = ShaderMode::MultiLight;
 
-    CurrentSharder.use();
-    auto LightPos = Lamp.GetWorldLocation();
-    CurrentSharder.setVec3("light.position", LightPos.x, LightPos.y, LightPos.z);
-    CurrentSharder.setVec3("light.direction", -LightPos.x, -LightPos.y, -LightPos.z);
+    switch (shaderMode) {
+        case ShaderMode::PointLight:
+            CurrentSharder = shader_PointLight;
+            CurrentSharder.use();
+            CurrentSharder.setVec3("light.position", Lamp[0].GetWorldLocation());
+            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+            CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+            break;
+        case ShaderMode::DirectLight:
+            CurrentSharder = shader_DirectLight;
+            CurrentSharder.use();
+            CurrentSharder.setVec3("light.direction", Lamp[0].GetWorldLocation());
+            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+            CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+            break;
+        case ShaderMode::FlashLight:
+            CurrentSharder = shader_FlashLight;
+            CurrentSharder.use();
+            CurrentSharder.setVec3("light.position", camera.Position);
+            CurrentSharder.setVec3("light.direction", camera.Lookat);
+            CurrentSharder.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
+            CurrentSharder.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
+            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+            CurrentSharder.setVec3("light.diffuse", 0.95f, 0.95f, 0.95f);
+            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+            CurrentSharder.setFloat("light.constant", 1.0f);
+            CurrentSharder.setFloat("light.linear", 0.09f);
+            CurrentSharder.setFloat("light.quadratic", 0.032f);
+            break;
+        case ShaderMode::MultiLight:
+            CurrentSharder = shader_MultiLight;
+            CurrentSharder.use();
+            CurrentSharder.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+            CurrentSharder.setVec3("dirLight.ambient", 0.2f, 0.2f, 0.2f);
+            CurrentSharder.setVec3("dirLight.diffuse", 0.5f, 0.5f, 0.5f);
+            CurrentSharder.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
 
-    CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-    CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-    CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+            CurrentSharder.setVec3("pointLights[0].position", Lamp[0].GetWorldLocation());
+            CurrentSharder.setVec3("pointLights[0].ambient", 0.f, 0.f, 0.f);
+            CurrentSharder.setVec3("pointLights[0].diffuse", 0.5f, 0.5f, 0.5f);
+            CurrentSharder.setVec3("pointLights[0].specular", 1.0f, 1.0f, 1.0f);
+            CurrentSharder.setFloat("pointLights[0].constant", 1.0f);
+            CurrentSharder.setFloat("pointLights[0].linear", 0.09f);
+            CurrentSharder.setFloat("pointLights[0].quadratic", 0.032f);
+            // point light 2
+            CurrentSharder.setVec3("pointLights[1].position", Lamp[1].GetWorldLocation());
+            CurrentSharder.setVec3("pointLights[1].ambient", 0.f, 0.f, 0.f);
+            CurrentSharder.setVec3("pointLights[1].diffuse", 0.8f, 0.8f, 0.8f);
+            CurrentSharder.setVec3("pointLights[1].specular", 0.8f, 0.8f, 0.8f);
+            CurrentSharder.setFloat("pointLights[1].constant", 1.0f);
+            CurrentSharder.setFloat("pointLights[1].linear", 0.09f);
+            CurrentSharder.setFloat("pointLights[1].quadratic", 0.032f);
+            // point light 3
+            CurrentSharder.setVec3("pointLights[2].position", Lamp[2].GetWorldLocation());
+            CurrentSharder.setVec3("pointLights[2].ambient", 0.f, 0.f, 0.f);
+            CurrentSharder.setVec3("pointLights[2].diffuse", 0.8f, 0.8f, 0.8f);
+            CurrentSharder.setVec3("pointLights[2].specular", 0.8f, 0.8f, 0.8f);
+            CurrentSharder.setFloat("pointLights[2].constant", 1.0f);
+            CurrentSharder.setFloat("pointLights[2].linear", 0.09f);
+            CurrentSharder.setFloat("pointLights[2].quadratic", 0.032f);
+            // point light 4
+            CurrentSharder.setVec3("pointLights[3].position", Lamp[3].GetWorldLocation());
+            CurrentSharder.setVec3("pointLights[3].ambient", 0.f, 0.f, 0.f);
+            CurrentSharder.setVec3("pointLights[3].diffuse", 0.8f, 0.8f, 0.8f);
+            CurrentSharder.setVec3("pointLights[3].specular", 0.8f, 0.8f, 0.8f);
+            CurrentSharder.setFloat("pointLights[3].constant", 1.0f);
+            CurrentSharder.setFloat("pointLights[3].linear", 0.09f);
+            CurrentSharder.setFloat("pointLights[3].quadratic", 0.032f);
+
+            CurrentSharder.setVec3("flashLight.position", camera.Position);
+            CurrentSharder.setVec3("flashLight.direction", camera.Lookat);
+            CurrentSharder.setFloat("flashLight.cutOff", glm::cos(glm::radians(12.5f)));
+            CurrentSharder.setFloat("flashLight.outerCutOff", glm::cos(glm::radians(17.5f)));
+            CurrentSharder.setVec3("flashLight.ambient", 0.f, 0.f, 0.f);
+            CurrentSharder.setVec3("flashLight.diffuse", 0.8f, 0.8f, 0.8f);
+            CurrentSharder.setVec3("flashLight.specular", 1.0f, 1.0f, 1.0f);
+            CurrentSharder.setFloat("flashLight.constant", 1.0f);
+            CurrentSharder.setFloat("flashLight.linear", 0.09f);
+            CurrentSharder.setFloat("flashLight.quadratic", 0.032f);
+
+            break;
+    }
 
 
     CurrentSharder.setFloat("material.shininess", 32.0f);
     CurrentSharder.setInt("material.diffuse", 0);
     CurrentSharder.setInt("material.specular", 1);
-    CurrentSharder.setInt("material.emission", 2);
+//    CurrentSharder.setInt("material.emission", 2);
 
     mat4 ViewMatrix = glm::mat4(1.0f);
     mat4 ProjectionMatrix = glm::mat4(1.0f);
@@ -293,9 +386,19 @@ int main() {
 
         // render container
         CurrentSharder.use();
-        LightPos = Lamp.GetWorldLocation();
-        CurrentSharder.setVec3("light.position", LightPos);
-        CurrentSharder.setVec3("light.direction", -LightPos);
+
+
+//        if (shaderMode == ShaderMode::FlashLight) {
+
+//        } else {
+//            LightPos = Lamp.GetWorldLocation();
+//            CurrentSharder.setVec3("light.position", LightPos);
+//            CurrentSharder.setVec3("light.direction", -LightPos);
+//        }
+
+        CurrentSharder.setVec3("flashLight.position", camera.Position);
+        CurrentSharder.setVec3("flashLight.direction", camera.Lookat);
+
         CurrentSharder.setFloat("mixValue", mixValue);
         CurrentSharder.setFloat("offset_u", offset_u);
         CurrentSharder.setFloat("offset_v", offset_v);
@@ -313,6 +416,7 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, Tex_EmissionMap);
 
 
+        CurrentSharder.setVec3("viewPos", camera.Position);
         //计算变换矩阵
         for (auto &boxe: boxes) {
             boxe.SetWorldRotation(angle_X, angle_Y, angle_Z);
@@ -327,22 +431,31 @@ int main() {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, Tex_Cat);
 
-        floor.SetWorldScale(5.f, 5.f, 5.f);
+//        floor.SetWorldScale(5.f, 5.f, 5.f);
 //        floor.SetWorldRotation(90.f, 0.f, 0.f);
         modelMatrix4f = floor.GetModelMatrix4f();
         transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        CurrentSharder.setMat4("transMatrix", transMatrix);
+
         CurrentSharder.setMat4("model", modelMatrix4f);
+        CurrentSharder.setMat4("projection", ProjectionMatrix);
+        CurrentSharder.setMat4("view", ViewMatrix);
+        CurrentSharder.setMat4("transMatrix", transMatrix);
+
         floor.Mesh->DrawElement();
 
 
         Lampshader.use();
 
-        Lamp.SetWorldLocation(position.x, position.y, position.z);
-        modelMatrix4f = Lamp.GetModelMatrix4f();
-        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        Lampshader.setMat4("transMatrix", transMatrix);
-        Lamp.Mesh->DrawElement();
+
+//        Lamp.SetWorldLocation(position.x, position.y, position.z);
+
+        for (int i = 0; i < 4; i++) {
+            modelMatrix4f = Lamp[i].GetModelMatrix4f();
+            transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
+            Lampshader.setMat4("transMatrix", transMatrix);
+            Lamp[i].Mesh->DrawElement();
+        }
+
 
         //划线模式和填充模式
         // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -371,16 +484,6 @@ int main() {
 void processInput(GLFWwindow *window) {
 
     static bool HasPress = false;
-//    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && !HasPress) {
-//        if (flag) {
-//            flag = false;
-//            GetProjectionMatrix = GetPerspectiveProjectionMatrix;
-//        } else {
-//            flag = true;
-//            GetProjectionMatrix = GetOrthographicProjectionMatrix;
-//        }
-//        HasPress = true;
-//    }
     if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE) {
         HasPress = false;
     }

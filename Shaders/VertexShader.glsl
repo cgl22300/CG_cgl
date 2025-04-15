@@ -30,6 +30,6 @@ void main()
 
     //片段在空间中的位置
     FragPos = vec3(model * vec4(aPos, 1.0));
-    Normal = vec3(model * vec4(aNormal, 1.0));
+    Normal = mat3(transpose(inverse(model))) * aNormal;
     TexUV = vec2(offset_u, offset_v) + scaleValue * aTexUV;
 }
