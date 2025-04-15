@@ -13,7 +13,7 @@ using namespace glm;
 class Camera {
 
 public:
-    float TurnRate = 0.01f;
+    float TurnRate = 0.003f;
     float VelocityRate = 1.f;
 
     vec3 Position;

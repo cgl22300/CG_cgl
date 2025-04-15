@@ -37,11 +37,11 @@ float offset_u = 0, offset_v = 0;
 float scaleValue = 1;
 float mixValue = 0.2f;
 bool flag = true;
-std::function<Matrix4f(float, float, float, float)> GetProjectionMatrix = GetPerspectiveProjectionMatrix;
+//std::function<mat4(float, float, float, float)> GetProjectionMatrix = GetPerspectiveProjectionMatrix;
 
 Camera camera = Camera(vec3(0.f, 0.f, 3.f), vec3(0.f, 1.0f, 0.f), vec3(0.f, 0.f, -1.f));
 
-Vector3f position = {0, 0, 0};
+vec3 position = {0, 0, 0};
 
 const char *VertexShader_Path = "../Shaders/VertexShader.glsl";
 const char *PointLightFrag_Path = "../Shaders/FragmentShader.frag";
@@ -231,6 +231,7 @@ int main() {
     Lamp.Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
     Lamp.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
     Lamp.SetWorldScale(0.1f, 0.1f, 0.1f);
+    position = vec3(1.f, 1.f, 1.f);
     Lamp.SetWorldLocation(1.f, 1.f, 1.f);
 
     float floor_vertices[] = {
@@ -292,6 +293,9 @@ int main() {
 
         // render container
         CurrentSharder.use();
+        LightPos = Lamp.GetWorldLocation();
+        CurrentSharder.setVec3("light.position", LightPos);
+        CurrentSharder.setVec3("light.direction", -LightPos);
         CurrentSharder.setFloat("mixValue", mixValue);
         CurrentSharder.setFloat("offset_u", offset_u);
         CurrentSharder.setFloat("offset_v", offset_v);
@@ -314,8 +318,8 @@ int main() {
             boxe.SetWorldRotation(angle_X, angle_Y, angle_Z);
             modelMatrix4f = boxe.GetModelMatrix4f();
             transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-            CurrentSharder.setMat4("transMatrix",transMatrix);
-            CurrentSharder.setMat4("model",modelMatrix4f);
+            CurrentSharder.setMat4("transMatrix", transMatrix);
+            CurrentSharder.setMat4("model", modelMatrix4f);
             boxe.Mesh->DrawElement();
         }
 
@@ -323,19 +327,21 @@ int main() {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, Tex_Cat);
 
-
+        floor.SetWorldScale(5.f, 5.f, 5.f);
+//        floor.SetWorldRotation(90.f, 0.f, 0.f);
         modelMatrix4f = floor.GetModelMatrix4f();
         transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        CurrentSharder.setMat4("transMatrix",transMatrix);
-        CurrentSharder.setMat4("model",modelMatrix4f);
+        CurrentSharder.setMat4("transMatrix", transMatrix);
+        CurrentSharder.setMat4("model", modelMatrix4f);
         floor.Mesh->DrawElement();
 
 
         Lampshader.use();
 
+        Lamp.SetWorldLocation(position.x, position.y, position.z);
         modelMatrix4f = Lamp.GetModelMatrix4f();
         transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        Lampshader.setMat4("transMatrix",transMatrix);
+        Lampshader.setMat4("transMatrix", transMatrix);
         Lamp.Mesh->DrawElement();
 
         //划线模式和填充模式
@@ -365,16 +371,16 @@ int main() {
 void processInput(GLFWwindow *window) {
 
     static bool HasPress = false;
-    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && !HasPress) {
-        if (flag) {
-            flag = false;
-            GetProjectionMatrix = GetPerspectiveProjectionMatrix;
-        } else {
-            flag = true;
-            GetProjectionMatrix = GetOrthographicProjectionMatrix;
-        }
-        HasPress = true;
-    }
+//    if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_PRESS && !HasPress) {
+//        if (flag) {
+//            flag = false;
+//            GetProjectionMatrix = GetPerspectiveProjectionMatrix;
+//        } else {
+//            flag = true;
+//            GetProjectionMatrix = GetOrthographicProjectionMatrix;
+//        }
+//        HasPress = true;
+//    }
     if (glfwGetKey(window, GLFW_KEY_TAB) == GLFW_RELEASE) {
         HasPress = false;
     }
@@ -444,16 +450,22 @@ void processInput(GLFWwindow *window) {
     }
 
     if (glfwGetKey(window, GLFW_KEY_KP_5) == GLFW_PRESS) {
-        position[1] += 0.01;
+        position.z -= 0.01;
     }
     if (glfwGetKey(window, GLFW_KEY_KP_2) == GLFW_PRESS) {
-        position[1] -= 0.01;
+        position.z += 0.01;
     }
     if (glfwGetKey(window, GLFW_KEY_KP_1) == GLFW_PRESS) {
-        position[0] += 0.01;
+        position.x -= 0.01;
     }
     if (glfwGetKey(window, GLFW_KEY_KP_3) == GLFW_PRESS) {
-        position[0] -= 0.01;
+        position.x += 0.01;
+    }
+    if (glfwGetKey(window, GLFW_KEY_KP_4) == GLFW_PRESS) {
+        position.y -= 0.01;
+    }
+    if (glfwGetKey(window, GLFW_KEY_KP_6) == GLFW_PRESS) {
+        position.y += 0.01;
     }
 
 
