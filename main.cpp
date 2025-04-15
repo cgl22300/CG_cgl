@@ -2,17 +2,18 @@
 #include <GLFW/glfw3.h>
 #include <cmath>
 #include <iostream>
-#include "Eigen/Eigen"
 #include <stb_image.h>
 #include <random>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "Camera.h"
 #include "Shader.h"
-#include "TransMatrix.h"
+
+
 #include "Actor.h"
 
-using namespace Eigen;
-
+using namespace glm;
 
 void framebuffer_size_callback(GLFWwindow *window, int width, int height);
 
@@ -38,7 +39,7 @@ float mixValue = 0.2f;
 bool flag = true;
 std::function<Matrix4f(float, float, float, float)> GetProjectionMatrix = GetPerspectiveProjectionMatrix;
 
-Camera camera = Camera(Vector3f(0.f, 0.f, 3.f), Vector3f(0.f, 1.0f, 0.f), Vector3f(0.f, 0.f, 1.f));
+Camera camera = Camera(vec3(0.f, 0.f, 3.f), vec3(0.f, 1.0f, 0.f), vec3(0.f, 0.f, -1.f));
 
 Vector3f position = {0, 0, 0};
 
@@ -93,6 +94,7 @@ int main() {
 
     //当窗口大小被改变后将会调用该回调函数,调整为新的的glViewpoint
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
     // 隐藏鼠标并让其自由移动
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     glfwSetCursorPosCallback(window, [](GLFWwindow *window, double xpos, double ypos) {
@@ -190,7 +192,7 @@ int main() {
 
 
     Actor Lamp;
-//
+
     unsigned int VBO0, EBO0;
 
     glGenBuffers(1, &VBO0);
@@ -222,21 +224,21 @@ int main() {
                                               (void *) (3 * sizeof(float)));
         boxes[i].Mesh->SetVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
                                               (void *) (6 * sizeof(float)));
-        boxes[i].SetWorldLocation(posiotions[i * 3 ], posiotions[i * 3 + 1 ], posiotions[i * 3 + 2 ]);
+        boxes[i].SetWorldLocation(posiotions[i * 3], posiotions[i * 3 + 1], posiotions[i * 3 + 2]);
 //        boxes[i].SetWorldRotation(dis(gen), dis(gen), dis(gen));
 
     }
     Lamp.Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
     Lamp.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
     Lamp.SetWorldScale(0.1f, 0.1f, 0.1f);
-    Lamp.SetWorldLocation(0.f, 0.f, 1.5f);
+    Lamp.SetWorldLocation(1.f, 1.f, 1.f);
 
     float floor_vertices[] = {
             //     ---- 位置 ----
-            2.f, -2.f, -2.f,        0.0f, 1.0f, 0.0f,      1.0f, 1.0f, // 右上
-            2.f, -2.f, 2.f,       0.0f, 1.0f, 0.0f,   1.0f, 0.0f, // 右下
-            -2.f, -2.f, 2.f,    0.0f, 1.0f, 0.0f,   0.0f, 0.0f, // 左下
-            -2.f, -2.f, -2.f, 0.0f, 1.0f, 0.0f,   0.0f, 1.0f // 左上
+            2.f, -2.f, -2.f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, // 右上
+            2.f, -2.f, 2.f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // 右下
+            -2.f, -2.f, 2.f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, // 左下
+            -2.f, -2.f, -2.f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f // 左上
     };
     unsigned int floor_ind[] = {
             0, 1, 3, // first triangle
@@ -252,8 +254,8 @@ int main() {
 
     CurrentSharder.use();
     auto LightPos = Lamp.GetWorldLocation();
-    CurrentSharder.setVec3("light.position", LightPos.x(), LightPos.y(), LightPos.z());
-    CurrentSharder.setVec3("light.direction", -LightPos.x(), -LightPos.y(), -LightPos.z());
+    CurrentSharder.setVec3("light.position", LightPos.x, LightPos.y, LightPos.z);
+    CurrentSharder.setVec3("light.direction", -LightPos.x, -LightPos.y, -LightPos.z);
 
     CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
     CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
@@ -264,10 +266,11 @@ int main() {
     CurrentSharder.setInt("material.diffuse", 0);
     CurrentSharder.setInt("material.specular", 1);
     CurrentSharder.setInt("material.emission", 2);
-    Matrix4f ViewMatrix = Matrix4f::Identity();
-    Matrix4f ProjectionMatrix = GetProjectionMatrix(45, HEIGHT / WIDTH, 0.1, 200);
-    Matrix4f modelMatrix4f = Matrix4f::Identity();
-    Matrix4f transMatrix = Matrix4f::Identity();
+
+    mat4 ViewMatrix = glm::mat4(1.0f);
+    mat4 ProjectionMatrix = glm::mat4(1.0f);
+    mat4 modelMatrix4f = glm::mat4(1.0f);
+    mat4 transMatrix = glm::mat4(1.0f);
 
     //开启深度测试
     glEnable(GL_DEPTH_TEST);
@@ -285,8 +288,7 @@ int main() {
 
 
         ViewMatrix = camera.GetViewMatrix();
-        ProjectionMatrix = GetProjectionMatrix(45, static_cast<float>( WIDTH ) / static_cast<float>( HEIGHT ), 0.1,
-                                               200);
+        ProjectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float) WIDTH / (float) HEIGHT, 0.1f, 100.0f);
 
         // render container
         CurrentSharder.use();
@@ -296,7 +298,7 @@ int main() {
         CurrentSharder.setFloat("scaleValue", scaleValue);
 
         auto ViewPoint = camera.GetViewPoint();
-        CurrentSharder.setVec3("viewPos", ViewPoint.x(), ViewPoint.y(), ViewPoint.z());
+        CurrentSharder.setVec3("viewPos", camera.Position);
 
         // bind textures on corresponding texture units
         glActiveTexture(GL_TEXTURE0);
@@ -306,18 +308,14 @@ int main() {
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, Tex_EmissionMap);
 
-        unsigned int transformLoc = glGetUniformLocation(shader_PointLight.ID, "transMatrix");
-        unsigned int model = glGetUniformLocation(shader_PointLight.ID, "model");
-
-        auto WorldmodelMatrix = GetMoveMatrix(position);
 
         //计算变换矩阵
         for (auto &boxe: boxes) {
             boxe.SetWorldRotation(angle_X, angle_Y, angle_Z);
-            modelMatrix4f = boxe.GetModelMatrix4f() * WorldmodelMatrix;
+            modelMatrix4f = boxe.GetModelMatrix4f();
             transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-            glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
-            glUniformMatrix4fv(model, 1, GL_FALSE, modelMatrix4f.data());
+            CurrentSharder.setMat4("transMatrix",transMatrix);
+            CurrentSharder.setMat4("model",modelMatrix4f);
             boxe.Mesh->DrawElement();
         }
 
@@ -326,18 +324,18 @@ int main() {
         glBindTexture(GL_TEXTURE_2D, Tex_Cat);
 
 
-        modelMatrix4f = box1.GetModelMatrix4f();
+        modelMatrix4f = floor.GetModelMatrix4f();
         transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
-        glUniformMatrix4fv(model, 1, GL_FALSE, modelMatrix4f.data());
+        CurrentSharder.setMat4("transMatrix",transMatrix);
+        CurrentSharder.setMat4("model",modelMatrix4f);
         floor.Mesh->DrawElement();
 
 
         Lampshader.use();
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
+
         modelMatrix4f = Lamp.GetModelMatrix4f();
         transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, transMatrix.data());
+        Lampshader.setMat4("transMatrix",transMatrix);
         Lamp.Mesh->DrawElement();
 
         //划线模式和填充模式
@@ -460,10 +458,10 @@ void processInput(GLFWwindow *window) {
 
 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { ;
-        camera.MoveForward(-0.1f);
+        camera.MoveForward(0.1f);
     }
     if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
-        camera.MoveForward(0.1f);
+        camera.MoveForward(-0.1f);
     }
     if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         camera.MoveRight(-0.1f);
@@ -563,3 +561,5 @@ unsigned int Load_Tex4f(const char *filename) {
     std::cout << "Failed to load texture" << std::endl;
     return 0;
 }
+
+

@@ -6,9 +6,11 @@
 #define CG_E1_1_ACTOR_H
 
 #include <memory>
-#include "Eigen/Eigen"
-#include "StaticMesh.h"
 
+#include "StaticMesh.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+using namespace glm;
 
 class Actor {
 
@@ -16,13 +18,13 @@ class Actor {
     //父级
     Actor *Parent;
     //没有父级时,方位通过此属性确定
-    Eigen::Vector3f WorldLocation;
-    Eigen::Vector3f WorldRotation;
-    Eigen::Vector3f WorldScale;
+    vec3 WorldLocation;
+    vec3 WorldRotation;
+    vec3 WorldScale;
     //相对于父级的位置
-    Eigen::Vector3f RelativeLocation;
-    Eigen::Vector3f RelativeRotation;
-    Eigen::Vector3f RelativeScale;
+    vec3 RelativeLocation;
+    vec3 RelativeRotation;
+    vec3 RelativeScale;
 
 public:
     std::unique_ptr<StaticMesh> Mesh;
@@ -32,7 +34,7 @@ public:
     void AttachTo(Actor *parent);
 
     // 委托构造函数，调用默认构造函数并更新 WorldLocation
-    explicit Actor(const Eigen::Vector3f &Location) : Actor() {
+    explicit Actor(const vec3 &Location) : Actor() {
         WorldLocation = Location;
     };
 
@@ -51,13 +53,13 @@ public:
     void SetRelativeScale(const float &x, const float &y, const float &z);
 
 
-    Eigen::Vector3f GetWorldLocation();
+    vec3 GetWorldLocation();
 
-    Eigen::Vector3f GetWorldRotation();
+    vec3 GetWorldRotation();
 
-    Eigen::Vector3f GetWorldScale();
+    vec3 GetWorldScale();
 
-    Eigen::Matrix4f GetModelMatrix4f();
+    mat4 GetModelMatrix4f();
 
 };
 

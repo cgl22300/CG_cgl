@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.00)
-project(CG_E1_1)
+project(CG_E2)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -30,7 +30,7 @@ include_directories(
 )
 
 # 可执行目标
-add_executable(CG_E1_1
+add_executable(CG_E2
         main.cpp
         "${GL_API_DIR}/src/glad.c"
         utility/Shader.cpp
@@ -38,7 +38,6 @@ add_executable(CG_E1_1
         utility/stb_image.cpp
         utility/Camera.cpp
         utility/Camera.h
-        utility/TransMatrix.h
         StaticMesh.cpp
         StaticMesh.h
         Actor.cpp
@@ -59,13 +58,13 @@ else()
 endif()
 
 # 链接库
-target_link_libraries(CG_E1_1
+target_link_libraries(CG_E2
         ${DEPENDENCY_IMPORT_LIBRARY}
         opengl32.lib
 )
 
 # 将 DLL 依赖复制到目标文件夹
-add_custom_command(TARGET CG_E1_1 POST_BUILD
+add_custom_command(TARGET CG_E2 POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_if_different
         "${DEPENDENCY_DLL}"
         "${EXECUTABLE_OUTPUT_DIR}"
@@ -74,7 +73,7 @@ add_custom_command(TARGET CG_E1_1 POST_BUILD
 
 # 复制Shader文件到输出目录
 file(GLOB SHADER_FILES "${SHADER_DIR}/*.glsl" "${SHADER_DIR}/*.frag")
-add_custom_command(TARGET CG_E1_1 POST_BUILD
+add_custom_command(TARGET CG_E2 POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E make_directory "${EXECUTABLE_OUTPUT_DIR}/Shaders"
         COMMAND ${CMAKE_COMMAND} -E copy
         ${SHADER_FILES}

@@ -5,22 +5,32 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
-#include "Eigen/Eigen"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
-using namespace Eigen;
+using namespace glm;
 
 class Camera {
-    float TurnRate = 0.2f;
-    float VelocityRate = 1.f;
-    Vector3f Position;
-    Vector3f Up;
-    Vector3f Lookat;
 
 public:
-    Camera(Vector3f position, Vector3f up, Vector3f lookat) : Position(position), Up(up), Lookat(lookat) {
+    float TurnRate = 0.01f;
+    float VelocityRate = 1.f;
+
+    vec3 Position;
+    vec3 Up;
+    vec3 Lookat;
+
+    float Yaw;
+    float Pitch;
+
+
+    float Zoom;
+
+    Camera(vec3 position, vec3 up, vec3 lookat) : Position(position), Up(up), Lookat(lookat), Zoom(45.f) {
+
     }
 
-    Camera();
+    Camera() : Zoom(45.f) {};
 
     void MoveForward(float velocityRate);
 
@@ -28,11 +38,19 @@ public:
 
     void MoveRise(float velocityRate);
 
+    inline void ProcessMouseScroll(float yoffset) {
+        Zoom -= (float) yoffset;
+        if (Zoom < 1.0f)
+            Zoom = 1.0f;
+        if (Zoom > 45.0f)
+            Zoom = 45.0f;
+    }
+
     void TurnX(float angle);
 
     void TurnY(float angle);
 
-    inline Vector3f GetViewPoint() {
+    inline vec3 GetViewPoint() {
         return Position;
     }
 
@@ -44,7 +62,7 @@ public:
         this->VelocityRate = velocityRate;
     }
 
-    Matrix4f GetViewMatrix();
+    mat4 GetViewMatrix();
 };
 
 

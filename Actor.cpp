@@ -3,48 +3,48 @@
 //
 
 #include "Actor.h"
-#include "TransMatrix.h"
+
 
 
 // World transform setters
 void Actor::SetWorldLocation(const float &x, const float &y, const float &z) {
-    WorldLocation << x, y, z;
+    WorldLocation = vec3(x, y, z);
 }
 
 void Actor::SetWorldRotation(const float &Yaw, const float &Pitch, const float &Roll) {
-    WorldRotation << Yaw, Pitch, Roll;
+    WorldRotation = vec3(Yaw, Pitch, Roll);
 }
 
 void Actor::SetWorldScale(const float &x, const float &y, const float &z) {
-    WorldScale << x, y, z;
+    WorldScale = vec3(x, y, z);
 }
 
 // Relative transform setters
 void Actor::SetRelativeLocation(const float &x, const float &y, const float &z) {
-    RelativeLocation << x, y, z;
+    RelativeLocation = vec3(x, y, z);
 }
 
 void Actor::SetRelativeRotation(const float &Yaw, const float &Pitch, const float &Roll) {
-    RelativeRotation << Yaw, Pitch, Roll;
+    RelativeRotation = vec3(Yaw, Pitch, Roll);
 }
 
 void Actor::SetRelativeScale(const float &x, const float &y, const float &z) {
-    RelativeScale << x, y, z;
+    RelativeScale = vec3(x, y, z);
 }
 
 void Actor::AttachTo(Actor *parent) {
     Parent = parent;
 }
 
-Eigen::Vector3f Actor::GetWorldLocation() {
+vec3 Actor::GetWorldLocation() {
     if (!Parent)return WorldLocation;
 
-    Eigen::Vector3f ParentLocation = Parent->GetWorldLocation();
+    auto ParentLocation = Parent->GetWorldLocation();
 
     return ParentLocation + RelativeLocation;
 }
 
-Eigen::Vector3f Actor::GetWorldRotation() {
+vec3 Actor::GetWorldRotation() {
     if (!Parent)return WorldRotation;
 
 
@@ -54,34 +54,41 @@ Eigen::Vector3f Actor::GetWorldRotation() {
     return ParentRotation + RelativeRotation;
 }
 
-Eigen::Vector3f Actor::GetWorldScale() {
+vec3 Actor::GetWorldScale() {
     if (!Parent)return WorldScale;
 
     auto ParentScale = Parent->WorldScale;
-    Eigen::Vector3f Scale;
-    Scale.x() = RelativeScale.x() * ParentScale.x();
-    Scale.y() = RelativeScale.y() * ParentScale.y();
-    Scale.z() = RelativeScale.z() * ParentScale.z();
+    vec3 Scale;
+    Scale.x = RelativeScale.x * ParentScale.x;
+    Scale.y = RelativeScale.y * ParentScale.y;
+    Scale.z = RelativeScale.z * ParentScale.z;
 
     return Scale;
 }
 
 Actor::Actor() : Parent(nullptr) {
-    WorldLocation << 0.f, 0.f, 0.f;
-    WorldRotation << 0.f, 0.f, 0.f;
-    WorldScale << 1.f, 1.f, 1.f;
+    WorldLocation = vec3(0.f, 0.f, 0.f);
+    WorldRotation = vec3(0.f, 0.f, 0.f);
+    WorldScale = vec3(1.f, 1.f, 1.f);
     //相对于父级的位置
-    RelativeLocation << 0.f, 0.f, 0.f;
-    RelativeRotation << 0.f, 0.f, 0.f;
-    RelativeScale << 1.f, 1.f, 1.f;
+    RelativeLocation = vec3 (0.f, 0.f, 0.f);
+    RelativeRotation = vec3 (0.f, 0.f, 0.f);
+    RelativeScale = vec3 (1.f, 1.f, 1.f);
     Mesh = std::make_unique<StaticMesh>();
 }
 
-Eigen::Matrix4f Actor::GetModelMatrix4f() {
+mat4 Actor::GetModelMatrix4f() {
+    glm::mat4 Identity = glm::mat4(1.0f);
 
-    Eigen::Matrix4f TransMat = GetMoveMatrix(GetWorldLocation());
-    Eigen::Matrix4f RotationMat = GetRotation(GetWorldRotation());
-    Eigen::Matrix4f ScaleMat = GetScale(GetWorldScale());
+    glm::vec3 position = GetWorldLocation();  // 位置
+    glm::vec3 rotation = GetWorldRotation();  // 欧拉角，单位为度
+    glm::vec3 scale = GetWorldScale();        // 缩放
+
+    glm::mat4 TransMat = glm::translate(Identity, position);
+    glm::mat4 RotationMat = glm::rotate(Identity, glm::radians(rotation.x), glm::vec3(1, 0, 0));
+    RotationMat = glm::rotate(RotationMat, glm::radians(rotation.y), glm::vec3(0, 1, 0));
+    RotationMat = glm::rotate(RotationMat, glm::radians(rotation.z), glm::vec3(0, 0, 1));
+    glm::mat4 ScaleMat = glm::scale(Identity, scale);
 
     return TransMat * RotationMat * ScaleMat;
 }
