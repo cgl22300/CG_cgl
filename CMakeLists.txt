@@ -44,6 +44,10 @@ add_executable(CG_E2
         Actor.h
         Light.cpp
         Light.h
+        utility/InputHandler.cpp
+        utility/InputHandler.h
+        utility/Timer.cpp
+        utility/Timer.h
 )
 
 # 输出目录配置
