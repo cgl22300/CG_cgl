@@ -3,15 +3,16 @@ out vec4 FragColor;
 
 
 in vec2 TexUV;
-in vec3 Normal;
+//in vec3 Normal;
 in vec3 FragPos;
 
 
 //漫反射贴图和高光贴图
 struct Material {
-    sampler2D diffuse;
-    sampler2D specular;
-    sampler2D emission;
+    sampler2D texture_diffuse;
+    sampler2D texture_specular;
+    sampler2D texture_normal;
+    sampler2D texture_height;
     float shininess;
 };
 
@@ -58,6 +59,7 @@ uniform DirectLigh dirLight;
 uniform PointLight pointLights[NR_POINT_LIGHTS];
 
 uniform FlashLight flashLight;
+uniform bool FlashSwitch;
 
 uniform vec3 viewPos;
 
@@ -68,7 +70,7 @@ vec3 CalculateFlashLight(FlashLight light, vec3 normal, vec3 fragPos, vec3 viewD
 void main() {
 
     // 属性
-    vec3 norm = normalize(Normal);
+    vec3 norm = normalize(vec3(texture(material.texture_diffuse, TexUV)));
     vec3 viewDir = normalize(viewPos - FragPos);
 
     // 第一阶段：定向光照
@@ -79,9 +81,12 @@ void main() {
     // 第三阶段：聚光
     //result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
+    //第四阶段:手电筒
+    if (FlashSwitch)
     result += CalculateFlashLight(flashLight, norm, FragPos, viewDir);
+    result += vec3(0.1, 0.1, 0.1);
 
-FragColor = vec4(result, 1.0);
+    FragColor = vec4(result, 1.0);
 
 }
 
@@ -93,9 +98,9 @@ vec3 CalculateDirectLight(DirectLigh light, vec3 normal, vec3 viewDir) {
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     // 合并结果
-    vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexUV));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexUV));
-    vec3 specular = light.specular * spec * vec3(texture(material.specular, TexUV));
+    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse, TexUV));
+    vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse, TexUV));
+    vec3 specular = light.specular * spec * vec3(texture(material.texture_specular, TexUV));
     return (ambient + diffuse + specular);
 }
 
@@ -112,9 +117,9 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewD
     float attenuation = 1.0 / (light.constant + light.linear * distance +
     light.quadratic * (distance * distance));
     // 合并结果
-    vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexUV));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, TexUV));
-    vec3 specular = light.specular * spec * vec3(texture(material.specular, TexUV));
+    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse, TexUV));
+    vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse, TexUV));
+    vec3 specular = light.specular * spec * vec3(texture(material.texture_specular, TexUV));
     ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
@@ -123,17 +128,17 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewD
 
 vec3 CalculateFlashLight(FlashLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
 
-    vec3 ambient = light.ambient * texture(material.diffuse, TexUV).rgb;
+    vec3 ambient = light.ambient * texture(material.texture_diffuse, TexUV).rgb;
 
     // diffuse
     vec3 lightDir = normalize(light.position - fragPos);
     float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = light.diffuse * diff * texture(material.diffuse, TexUV).rgb;
+    vec3 diffuse = light.diffuse * diff * texture(material.texture_diffuse, TexUV).rgb;
 
     // specular
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-    vec3 specular = light.specular * spec * texture(material.specular, TexUV).rgb;
+    vec3 specular = light.specular * spec * texture(material.texture_specular, TexUV).rgb;
 
     // spotlight (soft edges)
     float theta = dot(lightDir, normalize(-light.direction));

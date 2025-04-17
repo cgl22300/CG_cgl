@@ -5,13 +5,15 @@
 #include <stb_image.h>
 #include <random>
 #include <glm/glm.hpp>
+#include <unordered_map>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "Camera.h"
 #include "Shader.h"
 
 
-#include "Actor.h"
+#include "Actor/Actor.h"
+#include "Actor/Light.h"
 
 using namespace glm;
 
@@ -36,7 +38,8 @@ float angle_Z = 0;
 float offset_u = 0, offset_v = 0;
 float scaleValue = 1;
 float mixValue = 0.2f;
-bool flag = true;
+bool FlashSwitch = false;
+std::unordered_map<int, bool> keyPressTable;
 //std::function<mat4(float, float, float, float)> GetProjectionMatrix = GetPerspectiveProjectionMatrix;
 
 Camera camera = Camera(vec3(0.f, 0.f, 3.f), vec3(0.f, 1.0f, 0.f), vec3(0.f, 0.f, -1.f));
@@ -144,130 +147,39 @@ int main() {
     //------------
     //纹理生成
     stbi_set_flip_vertically_on_load(true);
+
     unsigned int Tex_box2 = Load_Tex4f(container2_path);
     unsigned int SpecularTex_box2 = Load_Tex4f(container2_specular_path);
-    unsigned int Tex_EmissionMap = Load_Tex(EmissionMap_Path);
-    unsigned int Tex_SmileFace = Load_Tex4f(SmileFace_Path);
-    unsigned int texture3 = Load_Tex(Tex1_Path);
-    unsigned int Tex_Cat = Load_Tex(Tex2_Path);
+//    unsigned int Tex_EmissionMap = Load_Tex(EmissionMap_Path);
+//    unsigned int Tex_SmileFace = Load_Tex4f(SmileFace_Path);
+//    unsigned int texture3 = Load_Tex(Tex1_Path);
+//    unsigned int Tex_Cat = Load_Tex(Tex2_Path);
 
-    float vertices[] = {
-            // positions          // normals           // texture coords
-            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
-            0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 0.0f,
-            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
-            0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 1.0f, 1.0f,
-            -0.5f, 0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f, 0.0f, 0.0f, -1.0f, 0.0f, 0.0f,
+    shared_ptr<Model> model = std::make_shared<Model>(
+            Model("I:/OpenGL/workspace/CG-E1-1/model/backpack/backpack.obj"));
+    Actor BackPack(model);
+    BackPack.SetWorldLocation(1.f, 1.f, 1.f);
 
-            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-            0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 0.0f,
-            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+//    std::random_device rd;
+//    std::mt19937 gen(rd());
+//    std::uniform_real_distribution<float> dis(-1.f, 1.f);
 
-            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-            -0.5f, 0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-            -0.5f, 0.5f, 0.5f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+    Light Lamp[4];
+    Lamp[0].SetWorldScale(0.1f, 0.1f, 0.1f);
+    Lamp[0].SetWorldLocation(2.0f, 2.0f, -2.0f);
 
-            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-            0.5f, 0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-            0.5f, -0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-            0.5f, 0.5f, 0.5f, 1.0f, 0.0f, 0.0f, 1.0f, 0.0f,
+    Lamp[1].SetWorldScale(0.1f, 0.1f, 0.1f);
+    Lamp[1].SetWorldLocation(-2.0f, 2.0f, -2.0f);
 
-            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
-            0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 1.0f,
-            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-            0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f, 0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f, 0.0f, -1.0f, 0.0f, 0.0f, 1.0f,
+    Lamp[2].SetWorldScale(0.1f, 0.1f, 0.1f);
+    Lamp[2].SetWorldLocation(2.0f, -2.0f, -2.0f);
 
-            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f,
-            0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-            0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-            -0.5f, 0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f,
-            -0.5f, 0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f
-    };
-    unsigned int indices[36];
-    for (unsigned int i = 0; i < 36; i++) {
-        indices[i] = i;
-    }
+    Lamp[3].SetWorldScale(0.1f, 0.1f, 0.1f);
+    Lamp[3].SetWorldLocation(-2.0f, -2.0f, -2.0f);
 
-    Actor box1;
-
-
-    unsigned int VBO0, EBO0;
-
-    glGenBuffers(1, &VBO0);
-    glGenBuffers(1, &EBO0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO0);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO0);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
-
-
-    float posiotions[] = {0.f, 0.f, 0.f,
-                          -1.f, -1.f, -1.f,
-                          -1.f, 1.f, -1.f,
-                          1.f, -1.f, -1.f,
-                          1.f, 1.f, -1.f
-    };
-
-
-    Actor boxes[5];
-    for (int i = 0; i < 5; i++) {
-        boxes[i].Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
-        boxes[i].Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
-        boxes[i].Mesh->SetVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                                              (void *) (3 * sizeof(float)));
-        boxes[i].Mesh->SetVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float),
-                                              (void *) (6 * sizeof(float)));
-        boxes[i].SetWorldLocation(posiotions[i * 3], posiotions[i * 3 + 1], posiotions[i * 3 + 2]);
-//        boxes[i].SetWorldRotation(dis(gen), dis(gen), dis(gen));
-    }
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_real_distribution<float> dis(-5.f, 5.f);
-
-    Actor Lamp[4];
-    for (int i = 0; i < 4; i++) {
-        Lamp[i].Mesh->LoadMesh(VBO0, EBO0, sizeof(indices) / sizeof(unsigned int));
-        Lamp[i].Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
-        Lamp[i].SetWorldScale(0.1f, 0.1f, 0.1f);
-        Lamp[i].SetWorldLocation(dis(gen), dis(gen), dis(gen));
-    }
-
-
-    float floor_vertices[] = {
-            //     ---- 位置 ----
-            2.f, -2.f, -2.f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, // 右上
-            2.f, -2.f, 2.f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f, // 右下
-            -2.f, -2.f, 2.f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, // 左下
-            -2.f, -2.f, -2.f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f // 左上
-    };
-    unsigned int floor_ind[] = {
-            0, 1, 3, // first triangle
-            1, 2, 3 // second triangle
-    };
-
-    Actor floor;
-    floor.Mesh->LoadMesh(floor_vertices, sizeof(floor_vertices), floor_ind, sizeof(floor_ind));
-    floor.Mesh->SetVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) 0);
-    floor.Mesh->SetVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (3 * sizeof(float)));
-    floor.Mesh->SetVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void *) (6 * sizeof(float)));
 
     //着色器准备完毕
-    Shader &CurrentSharder = shader_PointLight;
+    Shader &CurrentSharder = shader_MultiLight;
     ShaderMode shaderMode = ShaderMode::MultiLight;
 
     switch (shaderMode) {
@@ -388,14 +300,6 @@ int main() {
         CurrentSharder.use();
 
 
-//        if (shaderMode == ShaderMode::FlashLight) {
-
-//        } else {
-//            LightPos = Lamp.GetWorldLocation();
-//            CurrentSharder.setVec3("light.position", LightPos);
-//            CurrentSharder.setVec3("light.direction", -LightPos);
-//        }
-
         CurrentSharder.setVec3("flashLight.position", camera.Position);
         CurrentSharder.setVec3("flashLight.direction", camera.Lookat);
 
@@ -408,52 +312,40 @@ int main() {
         CurrentSharder.setVec3("viewPos", camera.Position);
 
         // bind textures on corresponding texture units
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, Tex_box2);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, SpecularTex_box2);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, Tex_EmissionMap);
+//        glActiveTexture(GL_TEXTURE0);
+//        glBindTexture(GL_TEXTURE_2D, Tex_box2);
+//        glActiveTexture(GL_TEXTURE1);
+//        glBindTexture(GL_TEXTURE_2D, SpecularTex_box2);
+//        glActiveTexture(GL_TEXTURE2);
+//        glBindTexture(GL_TEXTURE_2D, Tex_EmissionMap);
 
 
         CurrentSharder.setVec3("viewPos", camera.Position);
+        CurrentSharder.setBool("FlashSwitch", FlashSwitch);
         //计算变换矩阵
-        for (auto &boxe: boxes) {
-            boxe.SetWorldRotation(angle_X, angle_Y, angle_Z);
-            modelMatrix4f = boxe.GetModelMatrix4f();
-            transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-            CurrentSharder.setMat4("transMatrix", transMatrix);
-            CurrentSharder.setMat4("model", modelMatrix4f);
-            boxe.Mesh->DrawElement();
-        }
+//        for (auto &boxe: boxes) {
+//            boxe.SetWorldRotation(angle_X, angle_Y, angle_Z);
+//            modelMatrix4f = boxe.GetModelMatrix4f();
+//            transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
+//            boxe.Draw(transMatrix, modelMatrix4f, CurrentSharder);
+//        }
 
+//            transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, Tex_Cat);
+//        BackPack.SetWorldLocation(position.x, position.y, position.z);
 
-//        floor.SetWorldScale(5.f, 5.f, 5.f);
-//        floor.SetWorldRotation(90.f, 0.f, 0.f);
-        modelMatrix4f = floor.GetModelMatrix4f();
+        BackPack.SetWorldLocation(position.x, position.y, position.z);
+        modelMatrix4f = BackPack.GetModelMatrix4f();
         transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-
-        CurrentSharder.setMat4("model", modelMatrix4f);
-        CurrentSharder.setMat4("projection", ProjectionMatrix);
-        CurrentSharder.setMat4("view", ViewMatrix);
-        CurrentSharder.setMat4("transMatrix", transMatrix);
-
-        floor.Mesh->DrawElement();
+        BackPack.Draw(transMatrix, modelMatrix4f, CurrentSharder);
 
 
         Lampshader.use();
-
-
-//        Lamp.SetWorldLocation(position.x, position.y, position.z);
-
         for (int i = 0; i < 4; i++) {
             modelMatrix4f = Lamp[i].GetModelMatrix4f();
             transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
             Lampshader.setMat4("transMatrix", transMatrix);
-            Lamp[i].Mesh->DrawElement();
+            Lamp[i].Draw();
         }
 
 
@@ -470,14 +362,14 @@ int main() {
     }
 
 
-    glDeleteBuffers(1, &VBO0);
     glDeleteTextures(1, &Tex_box2);
-    glDeleteTextures(1, &Tex_SmileFace);
+//    glDeleteTextures(1, &Tex_SmileFace);
     // glfw: terminate, clearing all previously allocated GLFW resources.
     // ------------------------------------------------------------------
     glfwTerminate();
     return 0;
 }
+
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
 // ---------------------------------------------------------------------------------------------------------
@@ -590,6 +482,22 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS) {
         camera.MoveRise(-0.1f);
     }
+
+    if (glfwGetKey(window, GLFW_KEY_V) == GLFW_PRESS) {
+
+        auto it = keyPressTable.find(GLFW_KEY_V);
+        if (it == keyPressTable.end()) {
+            keyPressTable.emplace(GLFW_KEY_V, true);
+            FlashSwitch = !FlashSwitch;
+        } else if (!it->second) {
+            FlashSwitch = !FlashSwitch;
+        }
+
+    } else if (glfwGetKey(window, GLFW_KEY_V) == GLFW_RELEASE) {
+        auto it = keyPressTable.find(GLFW_KEY_V);
+        if (it != keyPressTable.end())it->second = false;
+    }
+
 
 }
 
