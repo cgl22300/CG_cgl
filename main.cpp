@@ -14,6 +14,8 @@
 
 #include "Actor/Actor.h"
 #include "Actor/Light.h"
+#include "ImageLoader.h"
+#include "Actor/SkyBox.h"
 
 using namespace glm;
 
@@ -23,9 +25,6 @@ void processInput(GLFWwindow *window);
 
 void CalculateColor(const float &t, float &red, float &green, float &blue);
 
-unsigned int Load_Tex(const char *filename);
-
-unsigned int Load_Tex4f(const char *filename);
 
 // settings
 int WIDTH = 800;
@@ -132,7 +131,19 @@ int main() {
         return -1;
     }
 
+    unsigned int front;
+    unsigned int back;
+    unsigned int bottom;
+    unsigned int top;
+    unsigned int left;
+    unsigned int right;
 
+    front = Load_Tex("../model/skybox/front.jpg");
+    back = Load_Tex("../model/skybox/back.jpg");;
+    bottom = Load_Tex("../model/skybox/bottom.jpg");;
+    top = Load_Tex("../model/skybox/top.jpg");;
+    left = Load_Tex("../model/skybox/left.jpg");;
+    right = Load_Tex("../model/skybox/right.jpg");;
 
     //准备微程序
     Shader shader_PointLight = Shader(VertexShader_Path, PointLightFrag_Path);
@@ -142,29 +153,38 @@ int main() {
 
     Shader Lampshader = Shader(VertexShader_Path, LampFrag_Path);
 
+    Shader SkyBoxShader = Shader(VertexShader_Path, "../Shaders/SkyBoxFragment.frag");
+    SkyBoxShader.use();
+    SkyBoxShader.setInt("sky_tex.front", 0);
+    SkyBoxShader.setInt("sky_tex.back", 1);
+    SkyBoxShader.setInt("sky_tex.bottom", 2);
+    SkyBoxShader.setInt("sky_tex.top", 3);
+    SkyBoxShader.setInt("sky_tex.left", 4);
+    SkyBoxShader.setInt("sky_tex.right", 5);
+
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        std::cerr << "OpenGL SkyBoxShader Init Error: " << err << std::endl;
+    }
 
     //渲染目标信息准备
     //------------
     //纹理生成
-    stbi_set_flip_vertically_on_load(true);
+//    stbi_set_flip_vertically_on_load(true);
 
     unsigned int Tex_box2 = Load_Tex4f(container2_path);
     unsigned int SpecularTex_box2 = Load_Tex4f(container2_specular_path);
-//    unsigned int Tex_EmissionMap = Load_Tex(EmissionMap_Path);
-//    unsigned int Tex_SmileFace = Load_Tex4f(SmileFace_Path);
-//    unsigned int texture3 = Load_Tex(Tex1_Path);
-//    unsigned int Tex_Cat = Load_Tex(Tex2_Path);
+
 
     shared_ptr<Model> model = std::make_shared<Model>(
-            Model("I:/OpenGL/workspace/CG-E1-1/model/backpack/backpack.obj"));
+            Model("I:/OpenGL/workspace/CG-E1-1/model/moulder_hand_sickle/mhs.obj"));
+
     Actor BackPack(model);
     BackPack.SetWorldLocation(1.f, 1.f, 1.f);
 
-//    std::random_device rd;
-//    std::mt19937 gen(rd());
-//    std::uniform_real_distribution<float> dis(-1.f, 1.f);
 
     Light Lamp[4];
+
     Lamp[0].SetWorldScale(0.1f, 0.1f, 0.1f);
     Lamp[0].SetWorldLocation(2.0f, 2.0f, -2.0f);
 
@@ -176,6 +196,8 @@ int main() {
 
     Lamp[3].SetWorldScale(0.1f, 0.1f, 0.1f);
     Lamp[3].SetWorldLocation(-2.0f, -2.0f, -2.0f);
+
+    SkyBox skyBox;
 
 
     //着色器准备完毕
@@ -278,6 +300,12 @@ int main() {
     mat4 modelMatrix4f = glm::mat4(1.0f);
     mat4 transMatrix = glm::mat4(1.0f);
 
+    if (!SkyBoxShader.isValid()) {
+        std::cout << "有效1\n";
+    }
+    if (!Lampshader.isValid()) {
+        std::cout << "有效2\n";
+    }
     //开启深度测试
     glEnable(GL_DEPTH_TEST);
 //    glDisable(GL_CULL_FACE);
@@ -286,11 +314,10 @@ int main() {
         // input
         // -----
         processInput(window);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 
         glClearColor(0.f, 0.f, 0.f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 
 
         ViewMatrix = camera.GetViewMatrix();
@@ -311,28 +338,10 @@ int main() {
         auto ViewPoint = camera.GetViewPoint();
         CurrentSharder.setVec3("viewPos", camera.Position);
 
-        // bind textures on corresponding texture units
-//        glActiveTexture(GL_TEXTURE0);
-//        glBindTexture(GL_TEXTURE_2D, Tex_box2);
-//        glActiveTexture(GL_TEXTURE1);
-//        glBindTexture(GL_TEXTURE_2D, SpecularTex_box2);
-//        glActiveTexture(GL_TEXTURE2);
-//        glBindTexture(GL_TEXTURE_2D, Tex_EmissionMap);
-
 
         CurrentSharder.setVec3("viewPos", camera.Position);
         CurrentSharder.setBool("FlashSwitch", FlashSwitch);
-        //计算变换矩阵
-//        for (auto &boxe: boxes) {
-//            boxe.SetWorldRotation(angle_X, angle_Y, angle_Z);
-//            modelMatrix4f = boxe.GetModelMatrix4f();
-//            transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-//            boxe.Draw(transMatrix, modelMatrix4f, CurrentSharder);
-//        }
 
-//            transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-
-//        BackPack.SetWorldLocation(position.x, position.y, position.z);
 
         BackPack.SetWorldLocation(position.x, position.y, position.z);
         modelMatrix4f = BackPack.GetModelMatrix4f();
@@ -340,15 +349,64 @@ int main() {
         BackPack.Draw(transMatrix, modelMatrix4f, CurrentSharder);
 
 
-        Lampshader.use();
-        for (int i = 0; i < 4; i++) {
-            modelMatrix4f = Lamp[i].GetModelMatrix4f();
-            transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-            Lampshader.setMat4("transMatrix", transMatrix);
-            Lamp[i].Draw();
+        if (!SkyBoxShader.isValid()) {
+            GLenum err = glGetError();
+            if (err != GL_NO_ERROR) {
+                std::cerr << "OpenGL SkyBoxShader Error: " << err << std::endl;
+            }
+
+        }
+
+        SkyBoxShader.use();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, front);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, back);
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, bottom);
+
+        glActiveTexture(GL_TEXTURE3);
+        glBindTexture(GL_TEXTURE_2D, top);
+        glActiveTexture(GL_TEXTURE4);
+        glBindTexture(GL_TEXTURE_2D, left);
+        glActiveTexture(GL_TEXTURE5);
+        glBindTexture(GL_TEXTURE_2D, right);
+
+        modelMatrix4f = skyBox.GetModelMatrix4f();
+        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
+        SkyBoxShader.setMat4("transMatrix", transMatrix);
+        SkyBoxShader.setMat4("model", modelMatrix4f);
+        skyBox.Draw(transMatrix, modelMatrix4f, SkyBoxShader);
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR) {
+            std::cerr << "OpenGL  Lampshader Error: " << err << std::endl;
         }
 
 
+
+
+        if (!Lampshader.isValid()) {
+            GLenum err = glGetError();
+            if (err != GL_NO_ERROR) {
+                std::cerr << "OpenGL  Lampshader Error: " << err << std::endl;
+            }
+
+        }
+        Lampshader.use();
+        for (int i = 0; i < 4; i++) {
+
+            modelMatrix4f = Lamp[i].GetModelMatrix4f();
+            transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
+
+            Lamp[i].Draw(transMatrix, Lampshader);
+        }
+
+
+
+         err = glGetError();
+        if (err != GL_NO_ERROR) {
+            std::cerr << "OpenGL Error: " << err << std::endl;
+        }
         //划线模式和填充模式
         // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
         // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
@@ -519,70 +577,5 @@ void CalculateColor(const float &t, float &red, float &green, float &blue) {
     blue = 0.5f + 0.5f * sin(t + 4.0f * M_PI / 3.0f);
 }
 
-unsigned int Load_Tex(const char *filename) {
-    //纹理生成
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    // 为当前绑定的纹理对象设置环绕、过滤方式
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    //tex读取
-    int width, height, nrChannels;
-    //分别获取图片高度宽度以及颜色通道数
-    unsigned char *data = stbi_load(filename, &width, &height, &nrChannels, 0);
-    if (data) {
-        /**
-     *texture内存解释:
-     *target:意味着此函数影响当前绑定的2D纹理对象,而1D和3D不受影响;
-     *level:生成mipmap级别
-     *internalformat:gl存储纹理类型
-     *width,height:不解释
-     *border:gl的屎山遗留物，不用管
-     *format:原图像格式
-     *type:数据类型,此处为char(byte)数组
-     *图像数据
-     */
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-        //生成mipmap(如果不需要则可省略);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        glBindTexture(GL_TEXTURE_2D, 0);
-        stbi_image_free(data);
-        return texture;
-    }
-    glBindTexture(GL_TEXTURE_2D, 0);
-    std::cout << "Failed to load texture" << std::endl;
-    return 0;
-}
-
-unsigned int Load_Tex4f(const char *filename) {
-    unsigned int texture;
-    glGenTextures(1, &texture);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    // set the texture wrapping parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    // set texture wrapping to GL_REPEAT (default wrapping method)
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    // set texture filtering parameters
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    // load image, create texture and generate mipmaps
-    //tex读取
-    int width, height, nrChannels;
-    //分别获取图片高度宽度以及颜色通道数
-    unsigned char *data = stbi_load(filename, &width, &height, &nrChannels, 0);
-    if (data) {
-        // note that the awesomeface.png has transparency and thus an alpha channel, so make sure to tell OpenGL the data type is of GL_RGBA
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-        glGenerateMipmap(GL_TEXTURE_2D);
-        stbi_image_free(data);
-        return texture;
-    }
-
-    std::cout << "Failed to load texture" << std::endl;
-    return 0;
-}
 
 

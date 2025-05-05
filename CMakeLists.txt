@@ -51,6 +51,10 @@ add_executable(CG_E2
         Actor/Mesh.h
         Actor/Model.cpp
         Actor/Model.h
+        Actor/SkyBox.cpp
+        Actor/SkyBox.h
+        Actor/geometry/box.h
+        utility/ImageLoader.h
 )
 
 # 输出目录配置

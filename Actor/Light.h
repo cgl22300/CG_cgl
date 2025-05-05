@@ -15,12 +15,13 @@
 
 class Light : public Actor {
 
-    Shader shader;
+
     unsigned int VAO;
 public:
+
     Light();
 
-    void Draw();
+    void Draw(mat4 transMat4,Shader& shader);
 
 };
 

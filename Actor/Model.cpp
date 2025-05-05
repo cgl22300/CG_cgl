@@ -4,37 +4,107 @@
 
 #include "Model.h"
 
+//unsigned int TextureFromFile(const char *path, const string &directory, bool gamma) {
+//    string filename = string(path);
+//    filename = directory + '/' + filename;
+//
+//    unsigned int textureID;
+//    glGenTextures(1, &textureID);
+//
+//    int width, height, nrComponents;
+//    unsigned char *data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+//    if (data) {
+//        GLenum format;
+//        if (nrComponents == 1)
+//            format = GL_RED;
+//        else if (nrComponents == 3)
+//            format = GL_RGB;
+//        else if (nrComponents == 4)
+//            format = GL_RGBA;
+//
+//        glBindTexture(GL_TEXTURE_2D, textureID);
+//        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+//        glGenerateMipmap(GL_TEXTURE_2D);
+//
+//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+//        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//
+//        stbi_image_free(data);
+//    } else {
+//        std::cout << "Texture failed to load at path: " << path << std::endl;
+//        stbi_image_free(data);
+//    }
+//
+//    return textureID;
+//}
+#include <filesystem>  // 需要C++17支持
+
 unsigned int TextureFromFile(const char *path, const string &directory, bool gamma) {
+    namespace fs = std::filesystem;
+
     string filename = string(path);
     filename = directory + '/' + filename;
 
     unsigned int textureID;
     glGenTextures(1, &textureID);
 
+    // 垂直翻转纹理（PNG通常需要）
+//    stbi_set_flip_vertically_on_load(true);
+    stbi_set_flip_vertically_on_load(false);
     int width, height, nrComponents;
     unsigned char *data = stbi_load(filename.c_str(), &width, &height, &nrComponents, 0);
+
     if (data) {
-        GLenum format;
-        if (nrComponents == 1)
-            format = GL_RED;
-        else if (nrComponents == 3)
-            format = GL_RGB;
-        else if (nrComponents == 4)
-            format = GL_RGBA;
+        GLenum internalFormat = GL_RGB;
+        GLenum dataFormat = GL_RGB;
+
+        // 根据通道数和gamma设置确定格式
+        switch (nrComponents) {
+            case 1:
+                internalFormat = dataFormat = GL_RED;
+                break;
+            case 2:
+                internalFormat = dataFormat = GL_RG;
+                break;
+            case 3:
+                internalFormat = gamma ? GL_SRGB : GL_RGB;
+                dataFormat = GL_RGB;
+                break;
+            case 4:
+                internalFormat = gamma ? GL_SRGB_ALPHA : GL_RGBA;
+                dataFormat = GL_RGBA;
+                break;
+        }
 
         glBindTexture(GL_TEXTURE_2D, textureID);
-        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, dataFormat, GL_UNSIGNED_BYTE, data);
         glGenerateMipmap(GL_TEXTURE_2D);
 
+        // 优化纹理参数
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
         glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+        // 对于单通道/双通道纹理设置Swizzle mask
+        if (nrComponents == 1) {
+            GLint swizzleMask[] = {GL_RED, GL_RED, GL_RED, GL_ONE};
+            glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+        } else if (nrComponents == 2) {
+            GLint swizzleMask[] = {GL_RED, GL_RED, GL_RED, GL_GREEN};
+            glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swizzleMask);
+        }
+
         stbi_image_free(data);
     } else {
-        std::cout << "Texture failed to load at path: " << path << std::endl;
-        stbi_image_free(data);
+        std::cerr << "Failed to load texture at path: " << filename << std::endl;
+
+        // 生成错误提示纹理
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        unsigned char errorTexture[] = {255, 0, 255, 255}; // 紫色
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 1, 1, 0, GL_RGBA, GL_UNSIGNED_BYTE, errorTexture);
     }
 
     return textureID;
@@ -55,6 +125,7 @@ void Model::loadModel(const string &path) {
     // retrieve the directory path of the filepath
     directory = path.substr(0, path.find_last_of('/'));
 
+    std::cout << "model directory:" << directory << std::endl;
     // process ASSIMP's root node recursively
     processNode(scene->mRootNode, scene);
 }

@@ -83,6 +83,26 @@ public:
         glUseProgram(ID);
     }
 
+    // 使用/激活程序
+    void use() const {
+        glUseProgram(ID);
+    }
+
+    // 检查着色器程序是否有效
+    [[nodiscard]] bool isValid() const {
+        int success;
+        glGetProgramiv(ID, GL_LINK_STATUS, &success);
+        return success == GL_TRUE;
+    }
+
+    // 检查着色器是否正在使用
+    [[nodiscard]] bool isInUse() const {
+        GLint currentProgram;
+        glGetIntegerv(GL_CURRENT_PROGRAM, &currentProgram);
+        return static_cast<GLuint>(currentProgram) == ID;
+    }
+
+
     // utility uniform functions
     // ------------------------------------------------------------------------
     void setBool(const std::string &name, bool value) const {
