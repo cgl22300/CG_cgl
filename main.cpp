@@ -16,6 +16,7 @@
 #include "Actor/Light.h"
 #include "ImageLoader.h"
 #include "Actor/SkyBox.h"
+#include "Actor/geometry/Plane.h"
 
 using namespace glm;
 
@@ -29,8 +30,7 @@ void CalculateColor(const float &t, float &red, float &green, float &blue);
 // settings
 int WIDTH = 800;
 int HEIGHT = 600;
-// stores how much we're
-// seeing of either texture
+float SkyBoxScale = .01;
 float angle_X = 0;
 float angle_Y = 0;
 float angle_Z = 0;
@@ -46,12 +46,14 @@ Camera camera = Camera(vec3(0.f, 0.f, 3.f), vec3(0.f, 1.0f, 0.f), vec3(0.f, 0.f,
 vec3 position = {0, 0, 0};
 
 const char *VertexShader_Path = "../Shaders/VertexShader.glsl";
+const char *SkyBoxVertexShader_Path = "../Shaders/SkyBoxVertexShader.glsl";
 
 //片段着色器
 const char *PointLightFrag_Path = "../Shaders/PointLight.frag";
 const char *DirectionLightFrag_Path = "../Shaders/DirectionLight.frag";
 const char *FlashLightFrag_Path = "../Shaders/FlashLight.frag";
 const char *MultiLightFrag_Path = "../Shaders/MultiLight.frag";
+const char *PBRFrag_Path = "../Shaders/PBRFragment.frag";
 
 const char *LampFrag_Path = "../Shaders/LightFragment.frag";
 //const char *VertexShader_Path = "Shaders/VertexShader.glsl";
@@ -85,7 +87,7 @@ int main() {
     // glfw: initialize and configure
     // ------------------------------
     glfwInit();
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -131,37 +133,41 @@ int main() {
         return -1;
     }
 
-    unsigned int front;
-    unsigned int back;
-    unsigned int bottom;
-    unsigned int top;
-    unsigned int left;
-    unsigned int right;
+    glEnable(GL_DEBUG_OUTPUT);
+    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+    glDebugMessageCallback([](GLenum source, GLenum type, GLuint id,
+                              GLenum severity, GLsizei length,
+                              const GLchar *message, const void *userParam) {
+        std::cerr << "[GL DEBUG] id=" << id
+                  << " severity=" << severity
+                  << " message: " << message << std::endl;
+    }, nullptr);
 
-    front = Load_Tex("../model/skybox/front.jpg");
-    back = Load_Tex("../model/skybox/back.jpg");;
-    bottom = Load_Tex("../model/skybox/bottom.jpg");;
-    top = Load_Tex("../model/skybox/top.jpg");;
-    left = Load_Tex("../model/skybox/left.jpg");;
-    right = Load_Tex("../model/skybox/right.jpg");;
 
-    //准备微程序
-    Shader shader_PointLight = Shader(VertexShader_Path, PointLightFrag_Path);
-    Shader shader_DirectLight = Shader(VertexShader_Path, DirectionLightFrag_Path);
-    Shader shader_FlashLight = Shader(VertexShader_Path, FlashLightFrag_Path);
+//    //准备微程序
+//    Shader shader_PointLight = Shader(VertexShader_Path, PointLightFrag_Path);
+//    Shader shader_DirectLight = Shader(VertexShader_Path, DirectionLightFrag_Path);
+//    Shader shader_FlashLight = Shader(VertexShader_Path, FlashLightFrag_Path);
     Shader shader_MultiLight = Shader(VertexShader_Path, MultiLightFrag_Path);
-
+    Shader shader_PBR = Shader(VertexShader_Path, PBRFrag_Path);
     Shader Lampshader = Shader(VertexShader_Path, LampFrag_Path);
 
-    Shader SkyBoxShader = Shader(VertexShader_Path, "../Shaders/SkyBoxFragment.frag");
-    SkyBoxShader.use();
-    SkyBoxShader.setInt("sky_tex.front", 0);
-    SkyBoxShader.setInt("sky_tex.back", 1);
-    SkyBoxShader.setInt("sky_tex.bottom", 2);
-    SkyBoxShader.setInt("sky_tex.top", 3);
-    SkyBoxShader.setInt("sky_tex.left", 4);
-    SkyBoxShader.setInt("sky_tex.right", 5);
 
+    Shader SkyBoxShader = Shader(SkyBoxVertexShader_Path, "../Shaders/SkyBoxFragment.frag");
+    unsigned int SkyBoxCubeMap;
+    std::vector<const char *> BoxFaces;
+    BoxFaces.emplace_back("../model/skybox/front.jpg");
+    BoxFaces.emplace_back("../model/skybox/back.jpg");
+    BoxFaces.emplace_back("../model/skybox/top.jpg");
+    BoxFaces.emplace_back("../model/skybox/bottom.jpg");
+    BoxFaces.emplace_back("../model/skybox/left.jpg");
+    BoxFaces.emplace_back("../model/skybox/right.jpg");
+    SkyBoxCubeMap = Load_CubeTex(BoxFaces);
+    SkyBoxShader.use();
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, SkyBoxCubeMap);
+    SkyBoxShader.setInt("skybox", 0);
+    SkyBoxShader.setFloat("sky_scale", SkyBoxScale);
     GLenum err = glGetError();
     if (err != GL_NO_ERROR) {
         std::cerr << "OpenGL SkyBoxShader Init Error: " << err << std::endl;
@@ -176,11 +182,20 @@ int main() {
     unsigned int SpecularTex_box2 = Load_Tex4f(container2_specular_path);
 
 
-    shared_ptr<Model> model = std::make_shared<Model>(
-            Model("I:/OpenGL/workspace/CG-E1-1/model/moulder_hand_sickle/mhs.obj"));
+//    shared_ptr<Model> model = std::make_shared<Model>(
+//            Model("I:/OpenGL/workspace/CG-E1-1/model/moulder_hand_sickle/mhs.obj"));
 
-    Actor BackPack(model);
-    BackPack.SetWorldLocation(1.f, 1.f, 1.f);
+    shared_ptr<Model> model = std::make_shared<Model>(
+            Model("I:/OpenGL/workspace/CG-E1-1/model/backpack/backpack.obj"));
+    Actor Tree(model);
+    Tree.SetWorldLocation(1.f, 1.f, 1.f);
+    Tree.SetWorldScale(2.f, 2.f, 2.f);
+
+    Plane plane;
+    plane.SetWorldLocation(0.f, -1.f, 0.f);
+
+    plane.setTexDiffuse(Load_Tex("../tex/Brick_albedo.jpg"));
+    plane.setTexNormal(Load_Tex("../tex/Brick_normal.jpg"));
 
 
     Light Lamp[4];
@@ -205,40 +220,40 @@ int main() {
     ShaderMode shaderMode = ShaderMode::MultiLight;
 
     switch (shaderMode) {
-        case ShaderMode::PointLight:
-            CurrentSharder = shader_PointLight;
-            CurrentSharder.use();
-            CurrentSharder.setVec3("light.position", Lamp[0].GetWorldLocation());
-            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-            CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-            break;
-        case ShaderMode::DirectLight:
-            CurrentSharder = shader_DirectLight;
-            CurrentSharder.use();
-            CurrentSharder.setVec3("light.direction", Lamp[0].GetWorldLocation());
-            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-            CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-            break;
-        case ShaderMode::FlashLight:
-            CurrentSharder = shader_FlashLight;
-            CurrentSharder.use();
-            CurrentSharder.setVec3("light.position", camera.Position);
-            CurrentSharder.setVec3("light.direction", camera.Lookat);
-            CurrentSharder.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
-            CurrentSharder.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
-            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-            CurrentSharder.setVec3("light.diffuse", 0.95f, 0.95f, 0.95f);
-            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-            CurrentSharder.setFloat("light.constant", 1.0f);
-            CurrentSharder.setFloat("light.linear", 0.09f);
-            CurrentSharder.setFloat("light.quadratic", 0.032f);
-            break;
+//        case ShaderMode::PointLight:
+//            CurrentSharder = shader_PointLight;
+//            CurrentSharder.use();
+//            CurrentSharder.setVec3("light.position", Lamp[0].GetWorldLocation());
+//            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+//            CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+//            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+//            break;
+//        case ShaderMode::DirectLight:
+//            CurrentSharder = shader_DirectLight;
+//            CurrentSharder.use();
+//            CurrentSharder.setVec3("light.direction", Lamp[0].GetWorldLocation());
+//            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+//            CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
+//            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+//            break;
+//        case ShaderMode::FlashLight:
+//            CurrentSharder = shader_FlashLight;
+//            CurrentSharder.use();
+//            CurrentSharder.setVec3("light.position", camera.Position);
+//            CurrentSharder.setVec3("light.direction", camera.Lookat);
+//            CurrentSharder.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
+//            CurrentSharder.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
+//            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
+//            CurrentSharder.setVec3("light.diffuse", 0.95f, 0.95f, 0.95f);
+//            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
+//            CurrentSharder.setFloat("light.constant", 1.0f);
+//            CurrentSharder.setFloat("light.linear", 0.09f);
+//            CurrentSharder.setFloat("light.quadratic", 0.032f);
+//            break;
         case ShaderMode::MultiLight:
             CurrentSharder = shader_MultiLight;
             CurrentSharder.use();
-            CurrentSharder.setVec3("dirLight.direction", -0.2f, -1.0f, -0.3f);
+            CurrentSharder.setVec3("dirLight.direction", -1.f, 1.0f, 1.f);
             CurrentSharder.setVec3("dirLight.ambient", 0.2f, 0.2f, 0.2f);
             CurrentSharder.setVec3("dirLight.diffuse", 0.5f, 0.5f, 0.5f);
             CurrentSharder.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
@@ -319,14 +334,31 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
-
         ViewMatrix = camera.GetViewMatrix();
         ProjectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float) WIDTH / (float) HEIGHT, 0.1f, 100.0f);
 
-        // render container
+
+//        glDepthFunc(GL_LEQUAL);    // 天空盒没有做模型变换，导致其深度异常
+//        glDepthMask(GL_FALSE);     // 禁止向深度缓冲写入
+//        if (!SkyBoxShader.isValid()) {
+//            GLenum err = glGetError();
+//            if (err != GL_NO_ERROR) {
+//                std::cerr << "OpenGL SkyBoxShader Error: " << err << std::endl;
+//            }
+//
+//        }
+//        SkyBoxShader.use();
+//        SkyBoxShader.setMat4("view", ViewMatrix);
+//        SkyBoxShader.setMat4("projection", ProjectionMatrix);
+//        skyBox.Draw(SkyBoxShader);
+//        GLenum err = glGetError();
+//        if (err != GL_NO_ERROR) {
+//            std::cerr << "OpenGL  SkyBox Error: " << err << std::endl;
+//        }
+//        glDepthMask(GL_TRUE);
+//        glDepthFunc(GL_LESS);
+
         CurrentSharder.use();
-
-
         CurrentSharder.setVec3("flashLight.position", camera.Position);
         CurrentSharder.setVec3("flashLight.direction", camera.Lookat);
 
@@ -343,46 +375,17 @@ int main() {
         CurrentSharder.setBool("FlashSwitch", FlashSwitch);
 
 
-        BackPack.SetWorldLocation(position.x, position.y, position.z);
-        modelMatrix4f = BackPack.GetModelMatrix4f();
+        Tree.SetWorldLocation(position.x, position.y, position.z);
+        modelMatrix4f = Tree.GetModelMatrix4f();
         transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        BackPack.Draw(transMatrix, modelMatrix4f, CurrentSharder);
+        Tree.Draw(transMatrix, modelMatrix4f, CurrentSharder);
 
 
-        if (!SkyBoxShader.isValid()) {
-            GLenum err = glGetError();
-            if (err != GL_NO_ERROR) {
-                std::cerr << "OpenGL SkyBoxShader Error: " << err << std::endl;
-            }
-
-        }
-
-        SkyBoxShader.use();
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, front);
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_2D, back);
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, bottom);
-
-        glActiveTexture(GL_TEXTURE3);
-        glBindTexture(GL_TEXTURE_2D, top);
-        glActiveTexture(GL_TEXTURE4);
-        glBindTexture(GL_TEXTURE_2D, left);
-        glActiveTexture(GL_TEXTURE5);
-        glBindTexture(GL_TEXTURE_2D, right);
-
-        modelMatrix4f = skyBox.GetModelMatrix4f();
+        modelMatrix4f = plane.GetModelMatrix4f();
         transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        SkyBoxShader.setMat4("transMatrix", transMatrix);
-        SkyBoxShader.setMat4("model", modelMatrix4f);
-        skyBox.Draw(transMatrix, modelMatrix4f, SkyBoxShader);
-        GLenum err = glGetError();
-        if (err != GL_NO_ERROR) {
-            std::cerr << "OpenGL  Lampshader Error: " << err << std::endl;
-        }
-
-
+        CurrentSharder.setMat4("transMatrix", transMatrix);
+        CurrentSharder.setMat4("model", modelMatrix4f);
+        plane.Draw(CurrentSharder);
 
 
         if (!Lampshader.isValid()) {
@@ -402,8 +405,7 @@ int main() {
         }
 
 
-
-         err = glGetError();
+        err = glGetError();
         if (err != GL_NO_ERROR) {
             std::cerr << "OpenGL Error: " << err << std::endl;
         }

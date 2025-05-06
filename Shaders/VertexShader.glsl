@@ -5,16 +5,14 @@ layout (location = 2) in vec2 aTexCoords;
 
 //变换矩阵
 uniform mat4 transMatrix;
-//贴图平移，放缩
-//uniform float scaleValue;
-//uniform float offset_u;
-//uniform float offset_v;
 uniform mat4 model;
 
-out vec3 vertexColor;
-out vec2 TexUV;
+
+out vec2 TexCoords;
 out vec3 Normal;
 out vec3 FragPos;
+
+
 
 void main()
 {
@@ -27,6 +25,6 @@ void main()
 
     FragPos = vec3(model * vec4(aPos, 1.0));
     Normal = mat3(transpose(inverse(model))) * aNormal;
-    TexUV = aTexCoords;
+    TexCoords= aTexCoords;
     //    TexUV = vec2(offset_u, offset_v) + scaleValue * aTexCoords;
 }

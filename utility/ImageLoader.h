@@ -87,4 +87,54 @@ inline unsigned int Load_Tex4f(const char *filename) {
     return 0;
 }
 
+
+inline unsigned int Load_CubeTex(const std::vector<const char *>& faces) {
+    if (faces.size() != 6) {
+        std::cerr << "Error: LoadCubemap requires exactly 6 face file paths." << std::endl;
+        return 0;
+    }
+
+    unsigned int texID;
+    glGenTextures(1, &texID);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, texID);
+
+    int width, height, nrChannels;
+    for (unsigned int i = 0; i < faces.size(); ++i) {
+        unsigned char* data = stbi_load(faces[i], &width, &height, &nrChannels, 0);
+        if (data) {
+            GLenum format = (nrChannels == 4 ? GL_RGBA : GL_RGB);
+            glTexImage2D(
+                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                    0,                          // mipmap level
+                    format,                     // internal format
+                    width, height,
+                    0,                          // border
+                    format,                     // source format
+                    GL_UNSIGNED_BYTE,
+                    data                        // pixel data
+            );
+            stbi_image_free(data);
+        } else {
+            std::cerr << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+            stbi_image_free(data);
+            glDeleteTextures(1, &texID);
+            return 0;
+        }
+    }
+
+    // Set texture parameters
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+    // Generate mipmaps
+    glGenerateMipmap(GL_TEXTURE_CUBE_MAP);
+
+    // Unbind
+    glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+    return texID;
+}
+
 #endif //CG_E2_IMAGELOADER_H

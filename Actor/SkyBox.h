@@ -15,17 +15,12 @@ class SkyBox : public Actor {
     unsigned int VAO;
 
 
-
-
-
-
 public:
     SkyBox();
 
-    void Draw(mat4 transMat4, mat4 modelMat4,Shader& shader) override;
+    void Draw(Shader &shader);
 
 };
-
 
 
 #endif //CG_E2_SKYBOX_H

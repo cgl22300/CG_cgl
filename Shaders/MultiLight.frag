@@ -2,7 +2,7 @@
 out vec4 FragColor;
 
 
-in vec2 TexUV;
+in vec2 TexCoords;
 //in vec3 Normal;
 in vec3 FragPos;
 
@@ -68,23 +68,23 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewD
 vec3 CalculateFlashLight(FlashLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
 void main() {
-
+    vec3 result;
     // 属性
-    vec3 norm = normalize(vec3(texture(material.texture_diffuse, TexUV)));
+    vec3 norm = normalize(vec3(texture(material.texture_diffuse, TexCoords)));
     vec3 viewDir = normalize(viewPos - FragPos);
 
     // 第一阶段：定向光照
-    vec3 result = CalculateDirectLight(dirLight, norm, viewDir);
+    result = CalculateDirectLight(dirLight, norm, viewDir);
     // 第二阶段：点光源
     for (int i = 0; i < NR_POINT_LIGHTS; i++)
-    result += CalculatePointLight(pointLights[i], norm, FragPos, viewDir);
+    //    result += 0.000001 * CalculatePointLight(pointLights[i], norm, FragPos, viewDir);
     // 第三阶段：聚光
     //result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
 
     //第四阶段:手电筒
     if (FlashSwitch)
     result += CalculateFlashLight(flashLight, norm, FragPos, viewDir);
-    result += vec3(0.1, 0.1, 0.1);
+    //    result += vec3(0.1, 0.1, 0.1);
 
     FragColor = vec4(result, 1.0);
 
@@ -98,9 +98,9 @@ vec3 CalculateDirectLight(DirectLigh light, vec3 normal, vec3 viewDir) {
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     // 合并结果
-    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse, TexUV));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse, TexUV));
-    vec3 specular = light.specular * spec * vec3(texture(material.texture_specular, TexUV));
+    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse, TexCoords));
+    vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse, TexCoords));
+    vec3 specular = light.specular * spec * vec3(texture(material.texture_specular, TexCoords));
     return (ambient + diffuse + specular);
 }
 
@@ -117,9 +117,9 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewD
     float attenuation = 1.0 / (light.constant + light.linear * distance +
     light.quadratic * (distance * distance));
     // 合并结果
-    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse, TexUV));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse, TexUV));
-    vec3 specular = light.specular * spec * vec3(texture(material.texture_specular, TexUV));
+    vec3 ambient = light.ambient * vec3(texture(material.texture_diffuse, TexCoords));
+    vec3 diffuse = light.diffuse * diff * vec3(texture(material.texture_diffuse, TexCoords));
+    vec3 specular = light.specular * spec * vec3(texture(material.texture_specular, TexCoords));
     ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
@@ -128,17 +128,17 @@ vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewD
 
 vec3 CalculateFlashLight(FlashLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
 
-    vec3 ambient = light.ambient * texture(material.texture_diffuse, TexUV).rgb;
+    vec3 ambient = light.ambient * texture(material.texture_diffuse, TexCoords).rgb;
 
     // diffuse
     vec3 lightDir = normalize(light.position - fragPos);
     float diff = max(dot(normal, lightDir), 0.0);
-    vec3 diffuse = light.diffuse * diff * texture(material.texture_diffuse, TexUV).rgb;
+    vec3 diffuse = light.diffuse * diff * texture(material.texture_diffuse, TexCoords).rgb;
 
     // specular
     vec3 reflectDir = reflect(-lightDir, normal);
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
-    vec3 specular = light.specular * spec * texture(material.texture_specular, TexUV).rgb;
+    vec3 specular = light.specular * spec * texture(material.texture_specular, TexCoords).rgb;
 
     // spotlight (soft edges)
     float theta = dot(lightDir, normalize(-light.direction));
