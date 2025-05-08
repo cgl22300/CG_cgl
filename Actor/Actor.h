@@ -60,6 +60,18 @@ public:
     void SetRelativeScale(const float &x, const float &y, const float &z);
 
 
+    void SetWorldLocation(const vec3 &worldLocation);
+
+    void SetWorldRotation(const vec3 &worldRotation);
+
+    void SetWorldScale(const vec3 &worldScale);
+
+    void SetRelativeLocation(const vec3 &relativeLocation);
+
+    void SetRelativeRotation(const vec3 &relativeRotation);
+
+    void SetRelativeScale(const vec3 &relativeScale);
+
     vec3 GetWorldLocation();
 
     vec3 GetWorldRotation();
@@ -68,9 +80,10 @@ public:
 
     mat4 GetModelMatrix4f();
 
-    virtual void Draw(mat4 transMat4, mat4 modelMat4, Shader &shader);
+//    virtual void Draw(mat4 transMat4, mat4 modelMat4, Shader &shader);
 
 
+    void Draw(mat4 ViewMat4, mat4 ProjectionMat4, Shader &shader);
 };
 
 

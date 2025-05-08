@@ -91,10 +91,14 @@ mat4 Actor::GetModelMatrix4f() {
     return TransMat * RotationMat * ScaleMat;
 }
 
-void Actor::Draw(mat4 transMat4, mat4 modelMat4, Shader &shader) {
+void Actor::Draw(mat4 ViewMat4, mat4 ProjectionMat4, Shader &shader) {
+    shader.use();
 
-    shader.setMat4("transMatrix", transMat4);
-    shader.setMat4("model", modelMat4);
+    auto modelMatrix4f = this->GetModelMatrix4f();
+    auto transMatrix = ProjectionMat4 * ViewMat4 * modelMatrix4f;
+
+    shader.setMat4("transMatrix", transMatrix);
+    shader.setMat4("model", modelMatrix4f);
 
     ActorMesh->Draw(shader);
 
@@ -106,6 +110,30 @@ Actor::Actor(const std::shared_ptr<Model> &mesh) : Actor() {
 
 void Actor::SetMesh(const std::shared_ptr<Model> &mesh) {
     ActorMesh = mesh;
+}
+
+void Actor::SetWorldLocation(const vec3 &worldLocation) {
+    WorldLocation = worldLocation;
+}
+
+void Actor::SetWorldRotation(const vec3 &worldRotation) {
+    WorldRotation = worldRotation;
+}
+
+void Actor::SetWorldScale(const vec3 &worldScale) {
+    WorldScale = worldScale;
+}
+
+void Actor::SetRelativeLocation(const vec3 &relativeLocation) {
+    RelativeLocation = relativeLocation;
+}
+
+void Actor::SetRelativeRotation(const vec3 &relativeRotation) {
+    RelativeRotation = relativeRotation;
+}
+
+void Actor::SetRelativeScale(const vec3 &relativeScale) {
+    RelativeScale = relativeScale;
 }
 
 

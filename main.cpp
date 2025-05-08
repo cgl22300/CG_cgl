@@ -133,15 +133,15 @@ int main() {
         return -1;
     }
 
-    glEnable(GL_DEBUG_OUTPUT);
-    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-    glDebugMessageCallback([](GLenum source, GLenum type, GLuint id,
-                              GLenum severity, GLsizei length,
-                              const GLchar *message, const void *userParam) {
-        std::cerr << "[GL DEBUG] id=" << id
-                  << " severity=" << severity
-                  << " message: " << message << std::endl;
-    }, nullptr);
+//    glEnable(GL_DEBUG_OUTPUT);
+//    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+//    glDebugMessageCallback([](GLenum source, GLenum type, GLuint id,
+//                              GLenum severity, GLsizei length,
+//                              const GLchar *message, const void *userParam) {
+//        std::cerr << "[GL DEBUG] id=" << id
+//                  << " severity=" << severity
+//                  << " message: " << message << std::endl;
+//    }, nullptr);
 
 
 //    //准备微程序
@@ -151,7 +151,7 @@ int main() {
     Shader shader_MultiLight = Shader(VertexShader_Path, MultiLightFrag_Path);
     Shader shader_PBR = Shader(VertexShader_Path, PBRFrag_Path);
     Shader Lampshader = Shader(VertexShader_Path, LampFrag_Path);
-
+    Shader shader_edges = Shader(VertexShader_Path, "../Shaders/SingleTest/OutLineFragment.frag");
 
     Shader SkyBoxShader = Shader(SkyBoxVertexShader_Path, "../Shaders/SkyBoxFragment.frag");
     unsigned int SkyBoxCubeMap;
@@ -186,13 +186,14 @@ int main() {
 //            Model("I:/OpenGL/workspace/CG-E1-1/model/moulder_hand_sickle/mhs.obj"));
 
     shared_ptr<Model> model = std::make_shared<Model>(
-            Model("I:/OpenGL/workspace/CG-E1-1/model/backpack/backpack.obj"));
+            Model("I:/OpenGL/workspace/CG-E1-1/model/tree/tree.obj"));
     Actor Tree(model);
     Tree.SetWorldLocation(1.f, 1.f, 1.f);
     Tree.SetWorldScale(2.f, 2.f, 2.f);
 
     Plane plane;
     plane.SetWorldLocation(0.f, -1.f, 0.f);
+    plane.SetWorldScale(5.f,5.f,5.f);
 
     plane.setTexDiffuse(Load_Tex("../tex/Brick_albedo.jpg"));
     plane.setTexNormal(Load_Tex("../tex/Brick_normal.jpg"));
@@ -254,9 +255,9 @@ int main() {
             CurrentSharder = shader_MultiLight;
             CurrentSharder.use();
             CurrentSharder.setVec3("dirLight.direction", -1.f, 1.0f, 1.f);
-            CurrentSharder.setVec3("dirLight.ambient", 0.2f, 0.2f, 0.2f);
-            CurrentSharder.setVec3("dirLight.diffuse", 0.5f, 0.5f, 0.5f);
-            CurrentSharder.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
+            CurrentSharder.setVec3("dirLight.ambient", 0.5f, 0.5f, 0.5f);
+            CurrentSharder.setVec3("dirLight.diffuse", 1.f, 1.f, 1.f);
+            CurrentSharder.setVec3("dirLight.specular", .5f, .5f, .5f);
 
             CurrentSharder.setVec3("pointLights[0].position", Lamp[0].GetWorldLocation());
             CurrentSharder.setVec3("pointLights[0].ambient", 0.f, 0.f, 0.f);
@@ -323,40 +324,52 @@ int main() {
     }
     //开启深度测试
     glEnable(GL_DEPTH_TEST);
-//    glDisable(GL_CULL_FACE);
+    //开启模板测试
+    glEnable(GL_STENCIL_TEST);
+
+//    glStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass)
+//    sfail：模板测试失败时采取的行为。
+//    dpfail：模板测试通过，但深度测试失败时采取的行为。
+//    dppass：模板测试和深度测试都通过时采取的行为。
+    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+
+//面剔除
+    glEnable(GL_CULL_FACE);
+
     while (!glfwWindowShouldClose(window)) {
 
         // input
         // -----
         processInput(window);
 
-        glClearColor(0.f, 0.f, 0.f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//        glClearColor(0.f, 0.f, 0.f, 1.0f);
+//        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
 
         ViewMatrix = camera.GetViewMatrix();
         ProjectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float) WIDTH / (float) HEIGHT, 0.1f, 100.0f);
 
 
-//        glDepthFunc(GL_LEQUAL);    // 天空盒没有做模型变换，导致其深度异常
-//        glDepthMask(GL_FALSE);     // 禁止向深度缓冲写入
-//        if (!SkyBoxShader.isValid()) {
-//            GLenum err = glGetError();
-//            if (err != GL_NO_ERROR) {
-//                std::cerr << "OpenGL SkyBoxShader Error: " << err << std::endl;
-//            }
-//
-//        }
-//        SkyBoxShader.use();
-//        SkyBoxShader.setMat4("view", ViewMatrix);
-//        SkyBoxShader.setMat4("projection", ProjectionMatrix);
-//        skyBox.Draw(SkyBoxShader);
-//        GLenum err = glGetError();
-//        if (err != GL_NO_ERROR) {
-//            std::cerr << "OpenGL  SkyBox Error: " << err << std::endl;
-//        }
-//        glDepthMask(GL_TRUE);
-//        glDepthFunc(GL_LESS);
+        glDepthFunc(GL_ALWAYS);    // 天空盒没有做模型变换，导致其深度异常
+        glDepthMask(GL_FALSE);     // 禁止向深度缓冲写入
+        if (!SkyBoxShader.isValid()) {
+            GLenum err = glGetError();
+            if (err != GL_NO_ERROR) {
+                std::cerr << "OpenGL SkyBoxShader Error: " << err << std::endl;
+            }
+
+        }
+        SkyBoxShader.use();
+        SkyBoxShader.setMat4("view", ViewMatrix);
+        SkyBoxShader.setMat4("projection", ProjectionMatrix);
+        skyBox.Draw(SkyBoxShader);
+        GLenum err = glGetError();
+        if (err != GL_NO_ERROR) {
+            std::cerr << "OpenGL  SkyBox Error: " << err << std::endl;
+        }
+        glDepthFunc(GL_LESS);
+        glDepthMask(GL_TRUE);
+        glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
         CurrentSharder.use();
         CurrentSharder.setVec3("flashLight.position", camera.Position);
@@ -376,15 +389,32 @@ int main() {
 
 
         Tree.SetWorldLocation(position.x, position.y, position.z);
-        modelMatrix4f = Tree.GetModelMatrix4f();
-        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        Tree.Draw(transMatrix, modelMatrix4f, CurrentSharder);
+        Tree.SetWorldScale(2.f, 2.f, 2.f);
 
+//        glStencilFunc(GL_ALWAYS, 1, 0xFF); // 所有的片段都应该更新模板缓冲
+//        glStencilMask(0xFF); // 启用模板缓冲写入
 
+        Tree.Draw(ViewMatrix, ProjectionMatrix, CurrentSharder);
+
+//        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+//        glStencilMask(0x00); // 禁止模板缓冲的写入
+//
+//        glDisable(GL_DEPTH_TEST);
+
+//        shader_edges.use();
+//        auto Scale = 1.1f * Tree.GetWorldScale();
+//        Tree.SetWorldScale(Scale);
+//        modelMatrix4f = Tree.GetModelMatrix4f();
+//        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
+//        Tree.Draw(transMatrix, modelMatrix4f, shader_edges);
+//
+//        glStencilMask(0xFF);
+//        glEnable(GL_DEPTH_TEST);
+
+        CurrentSharder.use();
         modelMatrix4f = plane.GetModelMatrix4f();
         transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-        CurrentSharder.setMat4("transMatrix", transMatrix);
-        CurrentSharder.setMat4("model", modelMatrix4f);
+
         plane.Draw(CurrentSharder);
 
 

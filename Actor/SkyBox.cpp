@@ -8,11 +8,11 @@
 
 SkyBox::SkyBox() {
     glGenVertexArrays(1, &VAO);
-    BindBoxMesh(VAO);
+    BindBoxMesh(VAO, BOX_FACE::INWARD);
 
 }
 
-void SkyBox::Draw(Shader& shader) {
+void SkyBox::Draw(Shader &shader) {
 
 
     glBindVertexArray(VAO);

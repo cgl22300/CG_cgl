@@ -9,7 +9,7 @@
 Light::Light() {
 
     glGenVertexArrays(1, &VAO);
-    BindBoxMesh(VAO);
+    BindBoxMesh(VAO,BOX_FACE::OUTWARD);
 }
 
 
@@ -21,9 +21,7 @@ void Light::Draw(mat4 transMat4, Shader& shader) {
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
         glBindVertexArray(0);
-//    }else {
-//        std::cout<<"Light::Draw: shader is inValid\n";
-//    }
+
 }
 
 

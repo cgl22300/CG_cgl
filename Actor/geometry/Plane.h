@@ -25,8 +25,8 @@ inline void BindPlaneMesh(const unsigned int &vao) {
 
         };
         unsigned int indices[6] = {
-                0, 1, 2,
-                2, 3, 0
+                2, 1, 0,
+                0, 3, 2
 
 
         };
@@ -73,8 +73,8 @@ public:
 
     void setTexDiffuse(unsigned int texDiffuse);
 
-    void Draw(const Shader& shader);
-
+    void Draw(const Shader &shader);
+    void Draw(mat4 ViewMat4, mat4 ProjectionMat4, Shader &shader);
 };
 
 #endif //CG_E2_PLANE_H
