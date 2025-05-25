@@ -3,7 +3,6 @@ out vec4 FragColor;
 
 
 in vec2 TexCoords;
-//in vec3 Normal;
 in vec3 FragPos;
 
 
@@ -35,6 +34,7 @@ struct PointLight {
     vec3 diffuse;
     vec3 specular;
 };
+
 struct FlashLight {
     vec3 position;
     vec3 direction;
@@ -63,32 +63,6 @@ uniform bool FlashSwitch;
 
 uniform vec3 viewPos;
 
-vec3 CalculateDirectLight(DirectLigh light, vec3 normal, vec3 viewDir);
-vec3 CalculatePointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
-vec3 CalculateFlashLight(FlashLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
-
-void main() {
-    vec3 result;
-    // 属性
-    vec3 norm = normalize(vec3(texture(material.texture_diffuse, TexCoords)));
-    vec3 viewDir = normalize(viewPos - FragPos);
-
-    // 第一阶段：定向光照
-    result = CalculateDirectLight(dirLight, norm, viewDir);
-    // 第二阶段：点光源
-    for (int i = 0; i < NR_POINT_LIGHTS; i++)
-    //    result += 0.000001 * CalculatePointLight(pointLights[i], norm, FragPos, viewDir);
-    // 第三阶段：聚光
-    //result += CalcSpotLight(spotLight, norm, FragPos, viewDir);
-
-    //第四阶段:手电筒
-    if (FlashSwitch)
-    result += CalculateFlashLight(flashLight, norm, FragPos, viewDir);
-    //    result += vec3(0.1, 0.1, 0.1);
-
-    FragColor = vec4(result, 1.0);
-
-}
 
 vec3 CalculateDirectLight(DirectLigh light, vec3 normal, vec3 viewDir) {
     vec3 lightDir = normalize(-light.direction);
@@ -155,4 +129,25 @@ vec3 CalculateFlashLight(FlashLight light, vec3 normal, vec3 fragPos, vec3 viewD
     specular *= attenuation;
 
     return ambient + diffuse + specular;
+}
+
+void main() {
+    vec3 result;
+    // 属性
+    vec3 norm = normalize(vec3(texture(material.texture_diffuse, TexCoords)));
+    vec3 viewDir = normalize(viewPos - FragPos);
+
+    // 第一阶段：定向光照
+    result = CalculateDirectLight(dirLight, norm, viewDir);
+    // 第二阶段：点光源
+    for (int i = 0; i < NR_POINT_LIGHTS; i++)
+        result += CalculatePointLight(pointLights[i], norm, FragPos, viewDir);
+
+    //第四阶段:手电筒
+    if (FlashSwitch)
+    result += CalculateFlashLight(flashLight, norm, FragPos, viewDir);
+    //    result += vec3(0.1, 0.1, 0.1);
+
+    FragColor = vec4(result, 1.0);
+
 }

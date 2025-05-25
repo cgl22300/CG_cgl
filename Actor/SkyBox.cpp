@@ -19,10 +19,10 @@ void SkyBox::Draw(Shader &shader) {
     glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
     glBindVertexArray(0);
 
-    GLenum err = glGetError();
-    if (err != GL_NO_ERROR) {
-        std::cerr << "OpenGL Error in SkyBox draw: " << err << std::endl;
-    }
+//    GLenum err = glGetError();
+//    if (err != GL_NO_ERROR) {
+//        std::cerr << "OpenGL Error in SkyBox draw: " << err << std::endl;
+//    }
 
 }
 

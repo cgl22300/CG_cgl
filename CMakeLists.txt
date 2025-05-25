@@ -57,6 +57,11 @@ add_executable(CG_E2
         utility/ImageLoader.h
         Actor/geometry/Plane.cpp
         Actor/geometry/Plane.h
+        Actor/ModelAsyncLoader.cpp
+        Actor/ModelAsyncLoader.h
+        utility/GlPostProcess.h
+        Actor/geometry/FullScreenTexturePlane.cpp
+        Actor/geometry/FullScreenTexturePlane.h
 )
 
 # 输出目录配置

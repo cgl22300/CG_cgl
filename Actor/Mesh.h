@@ -46,7 +46,6 @@ struct Texture {
 
 class Mesh {
 
-    //允许多个Mesh引用同一个Mesh数据,允许只有opengl内存对象复用
     std::vector<Vertex> Vertices;
     std::vector<unsigned int> Indices;
     std::vector<Texture> Textures;

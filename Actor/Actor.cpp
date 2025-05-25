@@ -76,22 +76,28 @@ Actor::Actor() : Parent(nullptr) {
 }
 
 mat4 Actor::GetModelMatrix4f() {
-    glm::mat4 Identity = glm::mat4(1.0f);
+    mat4 Identity = glm::mat4(1.0f);
 
-    glm::vec3 position = GetWorldLocation();  // 位置
-    glm::vec3 rotation = GetWorldRotation();  // 欧拉角，单位为度
-    glm::vec3 scale = GetWorldScale();        // 缩放
+    vec3 position = GetWorldLocation();  // 位置
+    vec3 rotation = GetWorldRotation();  // 欧拉角，单位为度
+    vec3 scale = GetWorldScale();        // 缩放
 
-    glm::mat4 TransMat = glm::translate(Identity, position);
-    glm::mat4 RotationMat = glm::rotate(Identity, glm::radians(rotation.x), glm::vec3(1, 0, 0));
-    RotationMat = glm::rotate(RotationMat, glm::radians(rotation.y), glm::vec3(0, 1, 0));
-    RotationMat = glm::rotate(RotationMat, glm::radians(rotation.z), glm::vec3(0, 0, 1));
-    glm::mat4 ScaleMat = glm::scale(Identity, scale);
+    mat4 TransMat = translate(Identity, position);
+    mat4 RotationMat = rotate(Identity, glm::radians(rotation.x), glm::vec3(1, 0, 0));
+    RotationMat = rotate(RotationMat, glm::radians(rotation.y), glm::vec3(0, 1, 0));
+    RotationMat = rotate(RotationMat, glm::radians(rotation.z), glm::vec3(0, 0, 1));
+    mat4 ScaleMat = glm::scale(Identity, scale);
 
     return TransMat * RotationMat * ScaleMat;
 }
 
 void Actor::Draw(mat4 ViewMat4, mat4 ProjectionMat4, Shader &shader) {
+
+    if (!ActorMesh) {
+        std::cout << "模型未初始化\n";
+        ActorInner::DrawWrongBox();
+        return;
+    }
     shader.use();
 
     auto modelMatrix4f = this->GetModelMatrix4f();
@@ -136,7 +142,31 @@ void Actor::SetRelativeScale(const vec3 &relativeScale) {
     RelativeScale = relativeScale;
 }
 
+vec3 Actor::GetForwardDirection() {
+    vec3 ForwardDirection = vec3(0.f, 1.f, 0.f); // OpenGL中默认Forward方向是 -Z
+    vec3 rotation = GetWorldRotation();
 
+    mat4 RotationMat = glm::mat4(1.0f);
+    RotationMat = glm::rotate(RotationMat, glm::radians(rotation.x), glm::vec3(1, 0, 0)); // pitch
+    RotationMat = glm::rotate(RotationMat, glm::radians(rotation.y), glm::vec3(0, 1, 0)); // yaw
+    RotationMat = glm::rotate(RotationMat, glm::radians(rotation.z), glm::vec3(0, 0, 1)); // roll
+
+    vec3 worldForward = vec3(RotationMat * vec4(ForwardDirection, 0.0f)); // 用0表示方向向量，不参与位移
+    return glm::normalize(worldForward); // 可选：归一化
+}
+
+vec3 Actor::GetUpDirection() {
+    vec3 ForwardDirection = vec3(0.f, 0.f, -1.f); // OpenGL中默认Forward方向是 -Z
+    vec3 rotation = GetWorldRotation();
+
+    mat4 RotationMat = glm::mat4(1.0f);
+    RotationMat = glm::rotate(RotationMat, glm::radians(rotation.x), glm::vec3(1, 0, 0)); // pitch
+    RotationMat = glm::rotate(RotationMat, glm::radians(rotation.y), glm::vec3(0, 1, 0)); // yaw
+    RotationMat = glm::rotate(RotationMat, glm::radians(rotation.z), glm::vec3(0, 0, 1)); // roll
+
+    vec3 worldForward = vec3(RotationMat * vec4(ForwardDirection, 0.0f)); // 用0表示方向向量，不参与位移
+    return glm::normalize(worldForward); // 可选：归一化
+}
 
 
 

@@ -17,6 +17,8 @@
 #include "ImageLoader.h"
 #include "Actor/SkyBox.h"
 #include "Actor/geometry/Plane.h"
+#include "GlPostProcess.h"
+#include "Actor/geometry/FullScreenTexturePlane.h"
 
 using namespace glm;
 
@@ -34,14 +36,21 @@ float SkyBoxScale = .01;
 float angle_X = 0;
 float angle_Y = 0;
 float angle_Z = 0;
-float offset_u = 0, offset_v = 0;
+float offset_u = 0, offset_v = 300;
 float scaleValue = 1;
 float mixValue = 0.2f;
 bool FlashSwitch = false;
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
 std::unordered_map<int, bool> keyPressTable;
 //std::function<mat4(float, float, float, float)> GetProjectionMatrix = GetPerspectiveProjectionMatrix;
+//创建纹理缓冲对象，渲染缓冲对象，绑定当前帧缓冲对象
+unsigned int framebuffer;
+unsigned int texColorBuffer;
+unsigned int rbo;
 
 Camera camera = Camera(vec3(0.f, 0.f, 3.f), vec3(0.f, 1.0f, 0.f), vec3(0.f, 0.f, -1.f));
+Camera camera2 = Camera(vec3(0.f, 0.f, 3.f), vec3(0.f, 1.0f, 0.f), vec3(0.f, 0.f, -1.f));
 
 vec3 position = {0, 0, 0};
 
@@ -108,8 +117,7 @@ int main() {
     //window被设置为当前的上下文主线程对象
     glfwMakeContextCurrent(window);
 
-    //当窗口大小被改变后将会调用该回调函数,调整为新的的glViewpoint
-    glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
+
 
     // 隐藏鼠标并让其自由移动
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -133,6 +141,24 @@ int main() {
         return -1;
     }
 
+
+    InitPostProcessBuffers(framebuffer, texColorBuffer, rbo, WIDTH, HEIGHT);
+//当窗口大小被改变后将会调用该回调函数,调整为新的的glViewpoint
+    glfwSetFramebufferSizeCallback(window, [](GLFWwindow *window, int width, int height) {
+        WIDTH = width;
+        HEIGHT = height;
+        glViewport(0, 0, width, height);
+        InitPostProcessBuffers(framebuffer, texColorBuffer, rbo, WIDTH, HEIGHT);
+    });
+
+    unsigned int mirrorFramebuffer;
+    unsigned int mirrorTexColorBuffer;
+    unsigned int mirrorRBO;
+    InitPostProcessBuffers(mirrorFramebuffer, mirrorTexColorBuffer, mirrorRBO, 300, 300);
+
+    InitPostProcessBuffers(framebuffer, texColorBuffer, rbo, WIDTH, HEIGHT);
+
+
 //    glEnable(GL_DEBUG_OUTPUT);
 //    glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 //    glDebugMessageCallback([](GLenum source, GLenum type, GLuint id,
@@ -151,7 +177,11 @@ int main() {
     Shader shader_MultiLight = Shader(VertexShader_Path, MultiLightFrag_Path);
     Shader shader_PBR = Shader(VertexShader_Path, PBRFrag_Path);
     Shader Lampshader = Shader(VertexShader_Path, LampFrag_Path);
-    Shader shader_edges = Shader(VertexShader_Path, "../Shaders/SingleTest/OutLineFragment.frag");
+//    Shader shader_edges = Shader(VertexShader_Path, "../Shaders/SingleTest/OutLineFragment.frag");
+    Shader Alpha_shader = Shader(VertexShader_Path, "../Shaders/AlphaFragment.frag");
+    Shader Post_shader = Shader("../Shaders/PostProcessShader/TextureRenderVertex.vert",
+                                "../Shaders/PostProcessShader/PostProcessFragment.frag");
+
 
     Shader SkyBoxShader = Shader(SkyBoxVertexShader_Path, "../Shaders/SkyBoxFragment.frag");
     unsigned int SkyBoxCubeMap;
@@ -181,23 +211,33 @@ int main() {
     unsigned int Tex_box2 = Load_Tex4f(container2_path);
     unsigned int SpecularTex_box2 = Load_Tex4f(container2_specular_path);
 
-
 //    shared_ptr<Model> model = std::make_shared<Model>(
 //            Model("I:/OpenGL/workspace/CG-E1-1/model/moulder_hand_sickle/mhs.obj"));
 
-    shared_ptr<Model> model = std::make_shared<Model>(
-            Model("I:/OpenGL/workspace/CG-E1-1/model/tree/tree.obj"));
-    Actor Tree(model);
-    Tree.SetWorldLocation(1.f, 1.f, 1.f);
-    Tree.SetWorldScale(2.f, 2.f, 2.f);
+//
+//树
+//    shared_ptr<Model> model = std::make_shared<Model>(
+//            Model("../model/tree/tree.obj"));
+//    Actor Tree(model);
+//    Tree.SetWorldLocation(1.f, 1.f, 1.f);
+//    Tree.SetWorldScale(2.f, 2.f, 2.f);
 
-    Plane plane;
-    plane.SetWorldLocation(0.f, -1.f, 0.f);
-    plane.SetWorldScale(5.f,5.f,5.f);
 
-    plane.setTexDiffuse(Load_Tex("../tex/Brick_albedo.jpg"));
-    plane.setTexNormal(Load_Tex("../tex/Brick_normal.jpg"));
+    unsigned int GrassTexAlpha = Load_Tex4f("../Assert/OpenglLearningContent/grass.png");
 
+
+    vector<glm::vec3> vegetation;
+    vegetation.emplace_back(-2.5f, 0.0f, -0.48f);
+    vegetation.emplace_back(2.5f, 0.0f, 0.51f);
+    vegetation.emplace_back(0.0f, 0.0f, 0.7f);
+    vegetation.emplace_back(-0.3f, 0.0f, -5.3f);
+    vegetation.emplace_back(0.5f, 0.0f, -0.6f);
+    Plane grass;
+    grass.setTexDiffuse(GrassTexAlpha);
+
+
+    Plane mirror;
+    mirror.setTexDiffuse(mirrorTexColorBuffer);
 
     Light Lamp[4];
 
@@ -216,48 +256,23 @@ int main() {
     SkyBox skyBox;
 
 
+    FullScreenTexturePlane fullScreenTexturePlane;
+    Post_shader.use();
+    Post_shader.setInt("screenTexture", 0);
+
+
     //着色器准备完毕
     Shader &CurrentSharder = shader_MultiLight;
     ShaderMode shaderMode = ShaderMode::MultiLight;
 
     switch (shaderMode) {
-//        case ShaderMode::PointLight:
-//            CurrentSharder = shader_PointLight;
-//            CurrentSharder.use();
-//            CurrentSharder.setVec3("light.position", Lamp[0].GetWorldLocation());
-//            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-//            CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-//            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-//            break;
-//        case ShaderMode::DirectLight:
-//            CurrentSharder = shader_DirectLight;
-//            CurrentSharder.use();
-//            CurrentSharder.setVec3("light.direction", Lamp[0].GetWorldLocation());
-//            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-//            CurrentSharder.setVec3("light.diffuse", 0.5f, 0.5f, 0.5f);
-//            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-//            break;
-//        case ShaderMode::FlashLight:
-//            CurrentSharder = shader_FlashLight;
-//            CurrentSharder.use();
-//            CurrentSharder.setVec3("light.position", camera.Position);
-//            CurrentSharder.setVec3("light.direction", camera.Lookat);
-//            CurrentSharder.setFloat("light.cutOff", glm::cos(glm::radians(12.5f)));
-//            CurrentSharder.setFloat("light.outerCutOff", glm::cos(glm::radians(17.5f)));
-//            CurrentSharder.setVec3("light.ambient", 0.2f, 0.2f, 0.2f);
-//            CurrentSharder.setVec3("light.diffuse", 0.95f, 0.95f, 0.95f);
-//            CurrentSharder.setVec3("light.specular", 1.0f, 1.0f, 1.0f);
-//            CurrentSharder.setFloat("light.constant", 1.0f);
-//            CurrentSharder.setFloat("light.linear", 0.09f);
-//            CurrentSharder.setFloat("light.quadratic", 0.032f);
-//            break;
         case ShaderMode::MultiLight:
             CurrentSharder = shader_MultiLight;
             CurrentSharder.use();
             CurrentSharder.setVec3("dirLight.direction", -1.f, 1.0f, 1.f);
-            CurrentSharder.setVec3("dirLight.ambient", 0.5f, 0.5f, 0.5f);
-            CurrentSharder.setVec3("dirLight.diffuse", 1.f, 1.f, 1.f);
-            CurrentSharder.setVec3("dirLight.specular", .5f, .5f, .5f);
+            CurrentSharder.setVec3("dirLight.ambient", 0.6f, 0.6f, 0.6f);
+            CurrentSharder.setVec3("dirLight.diffuse", 0.5f, 0.5f, 0.5f);
+            CurrentSharder.setVec3("dirLight.specular", 1.0f, 1.0f, 1.0f);
 
             CurrentSharder.setVec3("pointLights[0].position", Lamp[0].GetWorldLocation());
             CurrentSharder.setVec3("pointLights[0].ambient", 0.f, 0.f, 0.f);
@@ -322,51 +337,83 @@ int main() {
     if (!Lampshader.isValid()) {
         std::cout << "有效2\n";
     }
-    //开启深度测试
-    glEnable(GL_DEPTH_TEST);
     //开启模板测试
-    glEnable(GL_STENCIL_TEST);
+//    glEnable(GL_STENCIL_TEST);
 
 //    glStencilOp(GLenum sfail, GLenum dpfail, GLenum dppass)
 //    sfail：模板测试失败时采取的行为。
 //    dpfail：模板测试通过，但深度测试失败时采取的行为。
 //    dppass：模板测试和深度测试都通过时采取的行为。
-    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+//    glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
 //面剔除
     glEnable(GL_CULL_FACE);
 
+
+    //混合
+//    glEnable(GL_BLEND);
+//    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+
+    bool flag = false;
+
     while (!glfwWindowShouldClose(window)) {
-
-        // input
-        // -----
-        processInput(window);
-
-//        glClearColor(0.f, 0.f, 0.f, 1.0f);
-//        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
 
         ViewMatrix = camera.GetViewMatrix();
         ProjectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float) WIDTH / (float) HEIGHT, 0.1f, 100.0f);
 
 
+
+//        float currentFrame = static_cast<float>(glfwGetTime());
+//        deltaTime = currentFrame - lastFrame;
+//        lastFrame = currentFrame;
+        // input
+        // -----
+        processInput(window);
+
+        if (flag) {
+            //一轮渲染,将其绑定于帧缓冲并将画面渲染到上面
+            ViewMatrix = camera.GetViewMatrix();
+            ProjectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float) WIDTH / (float) HEIGHT, 0.1f,
+                                                100.0f);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+        } else {
+            //渲染到贴图
+            camera2.Lookat = mirror.GetForwardDirection();
+            camera2.Up = -mirror.GetUpDirection();
+            camera2.Position = mirror.GetWorldLocation();
+
+            ViewMatrix = camera2.GetViewMatrix();
+            ProjectionMatrix = glm::perspective(glm::radians(camera.Zoom), (float) WIDTH / (float) HEIGHT, 0.1f,
+                                                100.0f);
+
+            glBindFramebuffer(GL_FRAMEBUFFER, mirrorFramebuffer);
+        }
+
+
+        glEnable(GL_DEPTH_TEST);
+        glClearColor(0.f, 0.f, 0.f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+
         glDepthFunc(GL_ALWAYS);    // 天空盒没有做模型变换，导致其深度异常
         glDepthMask(GL_FALSE);     // 禁止向深度缓冲写入
-        if (!SkyBoxShader.isValid()) {
-            GLenum err = glGetError();
-            if (err != GL_NO_ERROR) {
-                std::cerr << "OpenGL SkyBoxShader Error: " << err << std::endl;
-            }
-
-        }
+//        if (!SkyBoxShader.isValid()) {
+//            GLenum err = glGetError();
+//            if (err != GL_NO_ERROR) {
+//                std::cerr << "OpenGL SkyBoxShader Error: " << err << std::endl;
+//            }
+//
+//        }
         SkyBoxShader.use();
         SkyBoxShader.setMat4("view", ViewMatrix);
         SkyBoxShader.setMat4("projection", ProjectionMatrix);
         skyBox.Draw(SkyBoxShader);
-        GLenum err = glGetError();
-        if (err != GL_NO_ERROR) {
-            std::cerr << "OpenGL  SkyBox Error: " << err << std::endl;
-        }
+//        GLenum err = glGetError();
+//        if (err != GL_NO_ERROR) {
+//            std::cerr << "OpenGL  SkyBox Error: " << err << std::endl;
+//        }
         glDepthFunc(GL_LESS);
         glDepthMask(GL_TRUE);
         glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -386,36 +433,26 @@ int main() {
 
         CurrentSharder.setVec3("viewPos", camera.Position);
         CurrentSharder.setBool("FlashSwitch", FlashSwitch);
+        if(flag){
+            mirror.SetWorldLocation(position.x,position.y,position.z);
+            mirror.SetWorldRotation(angle_X,angle_Y,angle_Z);
+            mirror.Draw(ViewMatrix, ProjectionMatrix,CurrentSharder);
+        }
 
 
-        Tree.SetWorldLocation(position.x, position.y, position.z);
-        Tree.SetWorldScale(2.f, 2.f, 2.f);
 
-//        glStencilFunc(GL_ALWAYS, 1, 0xFF); // 所有的片段都应该更新模板缓冲
-//        glStencilMask(0xFF); // 启用模板缓冲写入
+        glDisable(GL_CULL_FACE);
+        Alpha_shader.use();
+        for (vec3 location: vegetation) {
+            grass.SetWorldRotation(vec3(90.f, 0.f, 0.f));
+            grass.SetWorldLocation(location);
+            grass.Draw(ViewMatrix, ProjectionMatrix, Alpha_shader);
+            grass.SetWorldRotation(vec3(90.f, 0.f, 90.f));
+            grass.Draw(ViewMatrix, ProjectionMatrix, Alpha_shader);
+        }
+        glEnable(GL_CULL_FACE);
 
-        Tree.Draw(ViewMatrix, ProjectionMatrix, CurrentSharder);
 
-//        glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-//        glStencilMask(0x00); // 禁止模板缓冲的写入
-//
-//        glDisable(GL_DEPTH_TEST);
-
-//        shader_edges.use();
-//        auto Scale = 1.1f * Tree.GetWorldScale();
-//        Tree.SetWorldScale(Scale);
-//        modelMatrix4f = Tree.GetModelMatrix4f();
-//        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-//        Tree.Draw(transMatrix, modelMatrix4f, shader_edges);
-//
-//        glStencilMask(0xFF);
-//        glEnable(GL_DEPTH_TEST);
-
-        CurrentSharder.use();
-        modelMatrix4f = plane.GetModelMatrix4f();
-        transMatrix = ProjectionMatrix * ViewMatrix * modelMatrix4f;
-
-        plane.Draw(CurrentSharder);
 
 
         if (!Lampshader.isValid()) {
@@ -435,20 +472,32 @@ int main() {
         }
 
 
-        err = glGetError();
-        if (err != GL_NO_ERROR) {
-            std::cerr << "OpenGL Error: " << err << std::endl;
+//        err = glGetError();
+//        if (err != GL_NO_ERROR) {
+//            std::cerr << "OpenGL Error: " << err << std::endl;
+//        }
+
+        //二轮渲染
+        if (flag) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+            glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+            glDisable(GL_DEPTH_TEST);
+            Post_shader.use();
+            Post_shader.setFloat("kernel_offset", offset_v);
+            std::cout << "kernel_offset:" << offset_v << std::endl;
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, texColorBuffer);
+            fullScreenTexturePlane.Draw(Post_shader);
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
         }
-        //划线模式和填充模式
-        // glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        // glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
 
-        // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        //交换双缓冲内容,交换缓冲区并轮询输入输出（IO）事件（如按键按下 / 释放、鼠标移动等）。
-        // -------------------------------------------------------------------------------
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+        flag = !flag;
     }
 
 
@@ -484,14 +533,14 @@ void processInput(GLFWwindow *window) {
             mixValue = 0.0f;
     }
     if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS) {
-        offset_v += 0.01f; // change this value accordingly (might be too slow or too fast based on system hardware)
-        if (offset_v >= 1.0f)
-            offset_v = offset_v - 1.0f;
+        offset_v += 5.f; // change this value accordingly (might be too slow or too fast based on system hardware)
+//        if (offset_v >= 1.0f)
+//            offset_v = offset_v - 1.0f;
     }
     if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS) {
-        offset_v -= 0.01f;
-        if (offset_v <= 0.0f)
-            offset_v = 1.0f - offset_v;
+        offset_v -= 5.f;
+//        if (offset_v <= 0.0f)
+//            offset_v = 1.0f - offset_v;
     }
     if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS) {
         offset_u += 0.01f; // change this value accordingly (might be too slow or too fast based on system hardware)
@@ -593,14 +642,7 @@ void processInput(GLFWwindow *window) {
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
 // ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow *window, int width, int height) {
-    // make sure the viewport matches the new window dimensions; note that width and
-    // height will be significantly larger than specified on retina displays.
 
-    WIDTH = width;
-    HEIGHT = height;
-    glViewport(0, 0, width, height);
-}
 
 void CalculateColor(const float &t, float &red, float &green, float &blue) {
     // 使用相位差为120度的正弦波（2π/3弧度）

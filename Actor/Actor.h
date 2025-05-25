@@ -11,8 +11,31 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 #include "Model.h"
+#include "geometry/box.h"
 
 using namespace glm;
+
+namespace ActorInner {
+
+    static unsigned int box_VAO;
+    static Shader WrongShader;
+    static bool HasInit;
+
+    static Shader DrawWrongBox() {
+        if (!HasInit) {
+            BindBoxMesh(box_VAO, BOX_FACE::OUTWARD);
+            WrongShader=Shader("../Shaders/VertexShader.glsl","..Shaders/WrongShader.glsl");
+            HasInit = true;
+        }
+        WrongShader.use();
+        glBindVertexArray(box_VAO);
+        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_INT, nullptr);
+        glBindVertexArray(0);
+
+    }
+
+}
+
 
 class Actor {
 
@@ -28,11 +51,13 @@ class Actor {
     vec3 RelativeRotation;
     vec3 RelativeScale;
 
+
 public:
     //
-    std::shared_ptr<Model> ActorMesh;
+    std::shared_ptr<Model> ActorMesh = nullptr;
 
     Actor();
+
 
     explicit Actor(const std::shared_ptr<Model> &mesh);
 
@@ -80,10 +105,14 @@ public:
 
     mat4 GetModelMatrix4f();
 
+    vec3 GetForwardDirection();
+
 //    virtual void Draw(mat4 transMat4, mat4 modelMat4, Shader &shader);
 
 
     void Draw(mat4 ViewMat4, mat4 ProjectionMat4, Shader &shader);
+
+    vec3 GetUpDirection();
 };
 
 
