@@ -33,10 +33,10 @@ void CalculateColor(const float &t, float &red, float &green, float &blue);
 int WIDTH = 800;
 int HEIGHT = 600;
 float SkyBoxScale = .01;
-float angle_X = 0;
+float angle_X = 90;
 float angle_Y = 0;
 float angle_Z = 0;
-float offset_u = 0, offset_v = 300;
+float offset_u = 0, offset_v = 600;
 float scaleValue = 1;
 float mixValue = 0.2f;
 bool FlashSwitch = false;
@@ -52,7 +52,7 @@ unsigned int rbo;
 Camera camera = Camera(vec3(0.f, 0.f, 3.f), vec3(0.f, 1.0f, 0.f), vec3(0.f, 0.f, -1.f));
 Camera camera2 = Camera(vec3(0.f, 0.f, 3.f), vec3(0.f, 1.0f, 0.f), vec3(0.f, 0.f, -1.f));
 
-vec3 position = {0, 0, 0};
+vec3 position = {0, -0.5, -9};
 
 const char *VertexShader_Path = "../Shaders/VertexShader.glsl";
 const char *SkyBoxVertexShader_Path = "../Shaders/SkyBoxVertexShader.glsl";
